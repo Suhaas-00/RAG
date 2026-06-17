@@ -1,3 +1,4 @@
+import os
 import faiss
 import PyPDF2
 import numpy as np
@@ -8,73 +9,86 @@ from sentence_transformers import SentenceTransformer
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
-def pdf_to_vectors(pdf_path):
-    print(f"📄 Reading PDF: {pdf_path}")
-
+def read_pdf(pdf_path):
     with open(pdf_path, 'rb') as f:
-        pdf_reader = PyPDF2.PdfReader(f)
-        total_pages = len(pdf_reader.pages)
+        reader = PyPDF2.PdfReader(f)
 
-        page_texts = []
-        for page_num, page in enumerate(pdf_reader.pages):
+        texts = []
+        total_pages = len(reader.pages)
+
+        for i, page in enumerate(reader.pages):
             text = page.extract_text()
             if text:
-                page_texts.append({
-                    'text': text,
-                    'page_number': page_num + 1
+                texts.append({
+                    "text": text,
+                    "page": i + 1
                 })
 
-    # Combine text
-    text = ''.join([p['text'] for p in page_texts])
+    return texts, total_pages
 
-    print(f"📊 Total pages: {total_pages}")
-    print(f"📊 Total text length: {len(text):,}")
 
-    # Chunking
+def chunk_text(text, chunk_size=500, overlap=100):
     chunks = []
-    metadata = []
+    for i in range(0, len(text), chunk_size - overlap):
+        chunks.append(text[i:i + chunk_size])
+    return chunks
 
-    for i in range(0, len(text), 400):
-        chunk = text[i:i + 500]
-        chunks.append(chunk)
 
-        estimated_page = min((i // (len(text) // total_pages)) + 1, total_pages)
+def process_multiple_pdfs(folder_path):
+    all_chunks = []
+    all_metadata = []
 
-        metadata.append({
-            "text": chunk,
-            "estimated_page": estimated_page
-        })
+    pdf_files = [f for f in os.listdir(folder_path) if f.endswith(".pdf")]
 
-    print(f"✂️ Created {len(chunks)} chunks")
+    print(f"📂 Found {len(pdf_files)} PDFs")
 
-    # Embeddings
+    for pdf_file in pdf_files:
+        pdf_path = os.path.join(folder_path, pdf_file)
+        print(f"\n📄 Processing: {pdf_file}")
+
+        pages, total_pages = read_pdf(pdf_path)
+
+        full_text = " ".join([p["text"] for p in pages])
+
+        chunks = chunk_text(full_text)
+
+        for i, chunk in enumerate(chunks):
+            all_chunks.append(chunk)
+
+            all_metadata.append({
+                "source": pdf_file,          # ✅ IMPORTANT
+                "chunk_id": i,
+                "text": chunk
+            })
+
+    print(f"\n✂️ Total chunks: {len(all_chunks)}")
+
+    # Generate embeddings
     print("🔄 Generating embeddings...")
-    embeddings = model.encode(chunks, show_progress_bar=True)
-    embeddings = np.array(embeddings).astype('float32')
+    embeddings = model.encode(all_chunks, show_progress_bar=True)
+    embeddings = np.array(embeddings).astype("float32")
 
     # Normalize
     faiss.normalize_L2(embeddings)
 
-    # FAISS index
+    # Create FAISS index
     dimension = embeddings.shape[1]
     index = faiss.IndexFlatIP(dimension)
     index.add(embeddings)
 
-    # Save index
-    faiss.write_index(index, "vectors.index")
+    # Save
+    faiss.write_index(index, "multi_vectors.index")
 
-    # ✅ FIX: Save COMPLETE STRUCTURE
-    with open("chunks.pkl", "wb") as f:
+    with open("multi_chunks.pkl", "wb") as f:
         pickle.dump({
-            "chunks": chunks,
-            "metadata": metadata,
-            "total_pages": total_pages
+        "chunks": all_chunks,
+        "metadata": all_metadata,
+        "embeddings": embeddings   # 🔥 ADD THIS
         }, f)
 
-    print("✅ Index created successfully!")
-    print("📁 Files saved: vectors.index, chunks.pkl")
+    print("✅ Multi-PDF index created successfully!")
 
 
 if __name__ == "__main__":
-    pdf_file = "MongoDB.pdf"  # ✅ Make sure file exists in same folder
-    pdf_to_vectors(pdf_file)
+    folder = "pdfs"   # 📂 Put all PDFs here
+    process_multiple_pdfs(folder)
