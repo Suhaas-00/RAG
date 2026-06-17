@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize Groq
-client = os.getenv(GROQ_API_KEY)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 model = SentenceTransformer('all-MiniLM-L6-v2')
 index = faiss.read_index("vectors.index")
