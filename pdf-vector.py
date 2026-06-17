@@ -1,47 +1,53 @@
 import os
+import shutil
 import PyPDF2
 from sentence_transformers import SentenceTransformer
 import chromadb
-from chromadb.config import Settings
 
-# Load embedding model
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Initialize ChromaDB (local persistent DB)
-client = chromadb.Client(Settings(
-    persist_directory="./chroma_db"
-))
-
-# Create / get collection
-collection = client.get_or_create_collection(name="multi_pdf_rag")
+# ====== CONFIG ======
+CHROMA_PATH = "./chroma_db"
+COLLECTION_NAME = "multi_pdf_rag"
 
 
 def read_pdf(pdf_path):
-    with open(pdf_path, 'rb') as f:
+    with open(pdf_path, "rb") as f:
         reader = PyPDF2.PdfReader(f)
-
-        texts = []
-        total_pages = len(reader.pages)
-
+        pages_data = []
         for i, page in enumerate(reader.pages):
             text = page.extract_text()
             if text:
-                texts.append({
-                    "text": text,
-                    "page": i + 1
-                })
-
-    return texts, total_pages
+                pages_data.append({"text": text, "page": i + 1})
+    return pages_data
 
 
 def chunk_text(text, chunk_size=500, overlap=100):
     chunks = []
     for i in range(0, len(text), chunk_size - overlap):
-        chunks.append(text[i:i + chunk_size])
+        chunk = text[i : i + chunk_size].strip()
+        if chunk:
+            chunks.append(chunk)
     return chunks
 
 
-def process_multiple_pdfs(folder_path):
+def reset_database(client_ref):
+    """
+    Close and dereference the ChromaDB client FIRST (releases the SQLite lock),
+    then delete the folder on disk.
+    """
+    if client_ref is not None:
+        try:
+            # chromadb PersistentClient does not expose a .close() method,
+            # but deleting the Python object releases the file handle on Windows.
+            del client_ref
+        except Exception:
+            pass
+
+    if os.path.exists(CHROMA_PATH):
+        shutil.rmtree(CHROMA_PATH)
+        print("🧹 Old ChromaDB deleted")
+
+
+def process_multiple_pdfs(folder_path, collection, model):
     all_chunks = []
     all_metadata = []
     all_ids = []
@@ -49,30 +55,38 @@ def process_multiple_pdfs(folder_path):
     pdf_files = [f for f in os.listdir(folder_path) if f.endswith(".pdf")]
     print(f"📂 Found {len(pdf_files)} PDFs")
 
+    if not pdf_files:
+        print("❌ No PDF files found in folder:", folder_path)
+        return
+
     global_id = 0
 
     for pdf_file in pdf_files:
         pdf_path = os.path.join(folder_path, pdf_file)
         print(f"\n📄 Processing: {pdf_file}")
 
-        pages, total_pages = read_pdf(pdf_path)
+        pages = read_pdf(pdf_path)
 
-        full_text = " ".join([p["text"] for p in pages])
-        chunks = chunk_text(full_text)
+        for page_data in pages:
+            chunks = chunk_text(page_data["text"])
 
-        for i, chunk in enumerate(chunks):
-            all_chunks.append(chunk)
+            for i, chunk in enumerate(chunks):
+                all_chunks.append(chunk)
+                all_metadata.append(
+                    {
+                        "source": pdf_file,
+                        "page": page_data["page"],
+                        "chunk_id": i,
+                    }
+                )
+                all_ids.append(f"id_{global_id}")
+                global_id += 1
 
-            metadata = {
-                "source": pdf_file,
-                "chunk_id": i
-            }
-            all_metadata.append(metadata)
+    print(f"\n✂️  Total chunks created: {len(all_chunks)}")
 
-            all_ids.append(f"id_{global_id}")
-            global_id += 1
-
-    print(f"\n✂️ Total chunks: {len(all_chunks)}")
+    if not all_chunks:
+        print("❌ No text extracted from PDFs!")
+        return
 
     # Generate embeddings
     print("🔄 Generating embeddings...")
@@ -84,15 +98,28 @@ def process_multiple_pdfs(folder_path):
         documents=all_chunks,
         metadatas=all_metadata,
         embeddings=embeddings,
-        ids=all_ids
+        ids=all_ids,
     )
 
-    # Persist DB
-    client.persist()
-
-    print("✅ Multi-PDF stored in ChromaDB successfully!")
+    print("✅ Stored successfully!")
+    print("📊 Total items in DB:", collection.count())
+    print("📁 DB location:", os.path.abspath(CHROMA_PATH))
 
 
 if __name__ == "__main__":
     folder = "pdfs"
-    process_multiple_pdfs(folder)
+
+    # ── Step 1: destroy any existing client object BEFORE deleting the folder ──
+    # (At module start there is no client yet, so we pass None.)
+    reset_database(client_ref=None)
+
+    # ── Step 2: create a fresh client AFTER the folder has been removed ────────
+    client = chromadb.PersistentClient(path=CHROMA_PATH)
+    collection = client.get_or_create_collection(name=COLLECTION_NAME)
+
+    # ── Step 3: load the embedding model ──────────────────────────────────────
+    print("📦 Loading embedding model...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # ── Step 4: ingest ────────────────────────────────────────────────────────
+    process_multiple_pdfs(folder, collection, model)

@@ -3,66 +3,78 @@ from sentence_transformers import SentenceTransformer
 from groq import Groq
 from dotenv import load_dotenv
 import chromadb
-from chromadb.config import Settings
+
+# ====== CONFIG ======
+CHROMA_PATH = "./chroma_db"
+COLLECTION_NAME = "multi_pdf_rag"
 
 # Load env
-load_dotenv(override=True)
+load_dotenv()
 
+# Load models
+print("📦 Loading embedding model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
+
+print("🔑 Loading Groq client...")
 client_llm = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
-# Load ChromaDB
-client_db = chromadb.Client(Settings(
-    persist_directory="./chroma_db"
-))
+# ✅ CORRECT: Load persistent DB
+print("📂 Connecting to ChromaDB...")
+client_db = chromadb.PersistentClient(path=CHROMA_PATH)
 
-collection = client_db.get_or_create_collection(name="multi_pdf_rag")
+collection = client_db.get_or_create_collection(name=COLLECTION_NAME)
 
 
 def ask_question(question):
     try:
-        print("🚀 Processing question...")
+        print("\n🚀 Processing question...")
 
-        # 🔥 Improve query
-        question = question.lower()
+        db_count = collection.count()
+        print("📊 DB Count:", db_count)
+
+        if db_count == 0:
+            return "❌ Database is empty. Run pdf-vector.py first."
+
+        # Clean query
+        query = question.strip()
 
         # Encode query
-        query_embedding = model.encode([question]).tolist()
+        query_embedding = model.encode([query]).tolist()
 
-        # 🔍 Search in ChromaDB
+        # Search
         results = collection.query(
             query_embeddings=query_embedding,
             n_results=5
         )
 
-        documents = results["documents"][0]
-        metadatas = results["metadatas"][0]
-        distances = results["distances"][0]
+        documents = results.get("documents", [[]])[0]
+        metadatas = results.get("metadatas", [[]])[0]
+        distances = results.get("distances", [[]])[0]
+
+        if not documents:
+            return "❌ No relevant information found."
 
         print("\n🔍 Top Matches:")
         for meta, score in zip(metadatas, distances):
-            print(f"{meta['source']} → {score:.3f}")
+            print(f"{meta['source']} (Page {meta['page']}) → {score:.4f}")
 
         # Build context
-        context_parts = []
-        for doc, meta in zip(documents, metadatas):
-            context_parts.append(
-                f"[Source: {meta['source']} | Chunk: {meta['chunk_id']}]\n{doc}"
-            )
+        context = "\n\n".join([
+            f"[Source: {meta['source']} | Page: {meta['page']}]\n{doc}"
+            for doc, meta in zip(documents, metadatas)
+        ])
 
-        context = "\n\n".join(context_parts)
-
-        # LLM
+        # LLM call
         response = client_llm.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
                 {
                     "role": "system",
-                    "content": "Answer ONLY from the context. Mention source document."
+                    "content": "Answer ONLY using the provided context. Mention source and page."
                 },
                 {
                     "role": "user",
-                    "content": f"Context:\n{context}\n\nQuestion: {question}"
+                    "content": f"Context:\n{context}\n\nQuestion: {query}"
                 }
             ]
         )
@@ -70,27 +82,23 @@ def ask_question(question):
         return response.choices[0].message.content
 
     except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        return None
+        return f"❌ Error: {str(e)}"
 
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("🤖 Multi-PDF RAG System (ChromaDB) Ready")
+    print("🤖 RAG System (ChromaDB) Ready")
     print("=" * 50)
 
     while True:
         q = input("\n❓ Enter your question: ").strip()
 
         if q.lower() in ["exit", "quit"]:
+            print("👋 Exiting...")
             break
 
         if not q:
             continue
 
         answer = ask_question(q)
-
-        if answer:
-            print("\n🤖 Answer:\n", answer)
-        else:
-            print("❌ Failed to generate answer")
+        print("\n🤖 Answer:\n", answer)
