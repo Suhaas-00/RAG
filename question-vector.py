@@ -12,7 +12,7 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 load_dotenv()
 
 # Initialize Groq
-client = os.getenv(GROQ_API_KEY)
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 def ask_question(question):
     if not os.path.exists("vectors.index") or not os.path.exists("chunks.pkl"):
