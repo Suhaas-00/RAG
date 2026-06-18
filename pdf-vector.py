@@ -104,6 +104,7 @@ def process_multiple_pdfs(folder_path, collection, model):
     print("✅ Stored successfully!")
     print("📊 Total items in DB:", collection.count())
     print("📁 DB location:", os.path.abspath(CHROMA_PATH))
+    print("Dimensions of your Embeddings ",len(embeddings[0]))  
 
 
 if __name__ == "__main__":
