@@ -1,5 +1,4 @@
 # Ignore all files with a specific extension
-*.log
 *.env
-*.pkl
-*.index
+/chroma_db
+/pdfs
