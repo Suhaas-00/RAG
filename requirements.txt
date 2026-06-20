@@ -1,0 +1,35 @@
+# Core Python utilities
+
+tqdm>=4.66.0
+numpy>=1.24.0
+
+# NLP / Tokenization
+
+nltk>=3.8.1
+
+# PDF Processing
+
+pypdf>=4.0.0
+
+# LangChain ecosystem
+
+langchain>=0.2.0
+langchain-community>=0.2.0
+
+# Embeddings (Open-source)
+
+sentence-transformers>=2.2.2
+transformers>=4.40.0
+torch>=2.1.0
+
+# Vector Database
+
+faiss-cpu>=1.7.4
+
+# Optional but recommended (better performance & parsing)
+
+pdfplumber>=0.10.0
+
+# Logging / typing (usually built-in, but safe)
+
+typing-extensions>=4.8.0
