@@ -1,454 +1,151 @@
-"""Interactive question-answering CLI backed by the synchronized RAG pipeline.
-
-Usage
------
-Single-shot:
-    python -m rag_system.qa_cli "What disease is described in 12345678.pdf?"
-
-Interactive REPL:
-    python -m rag_system.qa_cli
-
-Flags:
-    --index-dir  PATH   Override the default FAISS index directory.
-    --model      NAME   Groq model identifier (default: llama-3.1-8b-instant).
-    --top-k      INT    Number of chunks to surface (default: 3).
-    --verbose           Emit retrieved chunks and scores before the answer.
-"""
+"""Backward-compatible CLI for the production medical RAG system."""
 
 from __future__ import annotations
 
 import argparse
 import logging
-import os
-import re
 import sys
 from pathlib import Path
-from typing import Optional
 
-from rag_system.retrieval.retriever import RAGRetriever
+from rag_system.hybrid_retriever import HybridRetriever, RetrievalResult
+from rag_system.llm import FALLBACK, answer_with_groq, load_groq_api_key
+from rag_system.query_parser import QueryIntent, build_retrieval_query, parse_query
+from rag_system.utils import debug_dump
 from rag_system.utils.config import Settings
-
-# ---------------------------------------------------------------------------
-# Module-level constants
-# ---------------------------------------------------------------------------
-
-FALLBACK: str = "Not found in the document"
-
-SECTIONS: tuple[str, ...] = (
-    "abstract",
-    "introduction",
-    "methods",
-    "results",
-    "discussion",
-    "conclusion",
-)
-
-_SYSTEM_PROMPT: str = (
-    "You are a strictly grounded medical-document assistant. "
-    "Answer only from the supplied context. "
-    "If the context does not contain the answer, reply exactly: "
-    f'"{FALLBACK}". '
-    "Never speculate or draw on outside knowledge."
-)
-
-_DISEASE_PATTERN = re.compile(
-    r"\b(?:lung cancer|breast cancer|prostate cancer|colorectal cancer|skin cancer|"
-    r"adenocarcinoma|squamous cell carcinoma|carcinoma|lymphoma|leukemia|melanoma|"
-    r"diabetes(?: mellitus)?|hypertension|stroke|asthma|covid-19|tuberculosis|"
-    r"alzheimer(?:'s)? disease|parkinson(?:'s)? disease|cardiovascular disease|"
-    r"heart failure|chronic kidney disease|obesity|arthritis|hepatitis|sepsis|"
-    r"pneumonia)\b",
-    re.IGNORECASE,
-)
-
-_TYPO_MAP: dict[str, str] = {
-    "wha": "what",
-    "wat": "what",
-    "us": "is",
-    "desease": "disease",
-    "disese": "disease",
-    "retreiver": "retriever",
-    "retreival": "retrieval",
-}
-
-_STOP_WORDS: frozenset[str] = frozenset(
-    {"what", "which", "is", "are", "the", "a", "an", "in", "of", "pdf", "paper", "file", "tell", "me", "about"}
-)
 
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# Query classification helpers
-# ---------------------------------------------------------------------------
+def _paper_map(retriever: HybridRetriever) -> dict[str, str]:
+    return {label: filename for label, filename in retriever.list_papers()}
 
 
-def extract_paper_id(query: Optional[str]) -> Optional[str]:
-    """Return the first run of 6+ digits found in *query* (PubMed ID or similar)."""
-    match = re.search(r"(\d{6,})", query or "")
-    return match.group(1) if match else None
-
-
-def extract_section(query: Optional[str]) -> Optional[str]:
-    """Return the first canonical section name found in *query*, or ``None``."""
-    lowered = (query or "").lower()
-    for section in SECTIONS:
-        if section in lowered:
-            return section
-    return None
-
-
-def classify_query(query: Optional[str]) -> str:
-    """Route a query to one of four handler categories.
-
-    Returns
-    -------
-    "list_papers"         – caller wants an inventory of indexed PDFs.
-    "disease_query"       – caller asks which diseases appear in the corpus.
-    "paper_section_query" – caller targets a specific section of a specific paper.
-    "normal_query"        – generic; fall through to vector retrieval.
-    """
-    lowered = (query or "").lower()
-    if "list" in lowered and "paper" in lowered:
-        return "list_papers"
-    if "disease" in lowered:
-        return "disease_query"
-    if extract_paper_id(lowered) and extract_section(lowered):
-        return "paper_section_query"
-    return "normal_query"
-
-
-# ---------------------------------------------------------------------------
-# Text helpers
-# ---------------------------------------------------------------------------
-
-
-def clean_text(text: Optional[str]) -> str:
-    """Repair common PDF tokenisation artifacts while preserving clinical meaning.
-
-    Transformations applied
-    -----------------------
-    * Soft-hyphen word joins (``multi- plexed`` → ``multiplexed``).
-    * Known run-together compound (``oncogeneaddicted`` → ``oncogene-addicted``).
-    * Collapse whitespace runs.
-    * Split run-together CamelCase that originates from PDF extraction (``FooBar`` → ``Foo Bar``).
-    """
-    if not text:
-        return ""
-    text = re.sub(r"(?<=\w)-\s+(?=\w)", "", text)
-    text = re.sub(r"\boncogeneaddicted\b", "oncogene-addicted", text, flags=re.IGNORECASE)
-    text = re.sub(r"\s+", " ", text)
-    text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
-    return text.strip()
-
-
-def is_noisy(text: Optional[str]) -> bool:
-    """Return ``True`` for chunks that are tables, figures, or OCR debris."""
-    lowered = (text or "").lower()
-    if any(marker in lowered for marker in ("table", "figure", "downloaded from", "references")):
-        return True
-    digit_ratio = sum(ch.isdigit() for ch in lowered) / max(len(lowered), 1)
-    return digit_ratio > 0.30
-
-
-# ---------------------------------------------------------------------------
-# Disease extraction
-# ---------------------------------------------------------------------------
-
-
-def extract_diseases(records: list[dict]) -> list[str]:
-    """Aggregate disease entities from metadata, supplemented by regex over text.
-
-    Strategy
-    --------
-    1. Prefer structured ``entities`` list (values prefixed with ``"disease:"``).
-    2. Fall back to regex over chunk text for records that are not noisy.
-    """
-    diseases: set[str] = set()
-    for record in records:
-        # Prefer pre-extracted structured entities.
-        for entity in record.get("entities", []):
-            if isinstance(entity, str) and entity.lower().startswith("disease:"):
-                diseases.add(entity.split(":", 1)[1].strip().lower())
-        # Supplement with regex over raw text.
-        text = record.get("text", "")
-        if not is_noisy(text):
-            for match in _DISEASE_PATTERN.finditer(text):
-                diseases.add(match.group(0).lower())
-    return sorted(diseases)
-
-
-# ---------------------------------------------------------------------------
-# Structured metadata answers (no vector retrieval needed)
-# ---------------------------------------------------------------------------
-
-
-def list_papers(retriever: RAGRetriever) -> str:
-    """Return a formatted inventory of all PDFs indexed in the payload."""
-    sources = {
-        Path(str(record.get("source", ""))).stem
-        for record in retriever.payload.get("records", [])
-        if record.get("source")
-    }
-    if not sources:
+def _metadata_answer(intent: QueryIntent, retriever: HybridRetriever) -> str:
+    if not intent.paper_source and not intent.paper_label:
         return FALLBACK
-    lines = "\n".join(f"  • {stem}" for stem in sorted(sources))
-    return f"📄 Papers in the index ({len(sources)}):\n{lines}"
-
-
-def disease_response(retriever: RAGRetriever, paper_id: Optional[str] = None) -> str:
-    """Return a formatted list of diseases, optionally scoped to *paper_id*."""
-    records: list[dict] = retriever.payload.get("records", [])
-    if paper_id:
-        records = [
-            r for r in records
-            if Path(str(r.get("source", ""))).stem.lower() == paper_id.lower()
-        ]
-    diseases = extract_diseases(records)
-    if not diseases:
+    keys = [intent.paper_source, Path(intent.paper_source or "").stem, intent.paper_label]
+    meta = None
+    for key in keys:
+        if key and key in retriever.payload.get("doc_metadata_index", {}):
+            meta = retriever.payload["doc_metadata_index"][key]
+            break
+    if not meta:
         return FALLBACK
-    lines = "\n".join(f"  - {disease}" for disease in diseases)
-    return f"🧬 Diseases mentioned{f' in {paper_id}' if paper_id else ''}:\n{lines}"
+    field = intent.metadata_field
+    if field and meta.get(field):
+        return f"{field.upper()}: {meta[field]} (Source: {meta.get('source')}; Section: metadata; Page: 1; Confidence: 1.0)"
+    lines = [f"Metadata for {meta.get('paper_id', intent.paper_label)} / {meta.get('source')}:"]
+    for key in ("doi", "pmid", "year", "journal"):
+        if meta.get(key):
+            lines.append(f"- {key.upper()}: {meta[key]}")
+    for key, label in (("diseases", "Diseases"), ("genes", "Genes"), ("study_designs", "Study designs")):
+        if meta.get(key):
+            lines.append(f"- {label}: {', '.join(meta[key])}")
+    lines.append(f"(Source: {meta.get('source')}; Section: metadata; Page: 1; Confidence: 1.0)")
+    return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Query preprocessing
-# ---------------------------------------------------------------------------
+def _list_papers_answer(retriever: HybridRetriever) -> str:
+    rows = retriever.list_papers()
+    if not rows:
+        return FALLBACK
+    return "\n".join(f"{label}: {filename}" for label, filename in rows)
 
 
-def preprocess_query(query: str) -> dict[str, Optional[str]]:
-    """Normalise a raw query string and extract a PDF source constraint.
-
-    Returns a dict with keys:
-    ``clean_query``   – stop-word-stripped, typo-corrected query text.
-    ``source_filter`` – PDF filename to pass to the retriever (may be ``None``).
-    """
-    lowered = (query or "").lower().strip()
-    paper_id = extract_paper_id(lowered)
-
-    # Prefer an explicit *.pdf* reference; fall back to a bare numeric ID.
-    source_match = re.search(r"\b([a-z0-9_.\-]+\.pdf)\b", lowered, re.IGNORECASE)
-    if source_match:
-        source_filter: Optional[str] = source_match.group(1)
-        lowered = lowered[: source_match.start()] + " " + lowered[source_match.end():]
-    else:
-        source_filter = f"{paper_id}.pdf" if paper_id else None
-
-    # Conservative typo correction on individual tokens.
-    words = re.findall(r"[a-z0-9\-]+", lowered)
-    words = [_TYPO_MAP.get(w, w) for w in words]
-
-    # Disease questions gain semantic coverage from section headings.
-    if "disease" in words and any(w in words for w in {"describe", "described", "study"}):
-        clean_query = "disease described study abstract introduction"
-    else:
-        clean_query = " ".join(w for w in words if w not in _STOP_WORDS)
-
-    return {"clean_query": clean_query.strip() or lowered, "source_filter": source_filter}
-
-
-# ---------------------------------------------------------------------------
-# Core answer function
-# ---------------------------------------------------------------------------
+def _format_direct_section(result: RetrievalResult) -> str:
+    if not result.chunks:
+        return FALLBACK
+    lines: list[str] = []
+    for chunk in result.chunks:
+        page = chunk.get("page", chunk.get("page_number", "?"))
+        lines.append(
+            f"Source: {chunk.get('source')} | Paper: {chunk.get('paper_id')} | "
+            f"Section: {chunk.get('section')} | Page: {page} | "
+            f"Confidence: {chunk.get('confidence', '?')}\n{chunk.get('text', '')}"
+        )
+    return "\n\n".join(lines)
 
 
 def answer_question(
     question: str,
-    retriever: RAGRetriever,
+    retriever,
     model: str,
     *,
-    top_k: int = 3,
+    top_k: int = 5,
+    alpha: float = 0.55,
     verbose: bool = False,
 ) -> str:
-    """Retrieve grounded context and generate an answer via Groq.
+    """Answer a question while preserving the old public function signature."""
 
-    Parameters
-    ----------
-    question:  Raw user question string.
-    retriever: Loaded :class:`RAGRetriever` instance.
-    model:     Groq model identifier.
-    top_k:     Maximum number of retrieved chunks to feed into the prompt.
-    verbose:   When ``True``, emit chunk metadata to *stderr* before the answer.
+    if not isinstance(retriever, HybridRetriever):
+        # Compatibility with old imports that still instantiate RAGRetriever.
+        if hasattr(retriever, "index") and hasattr(retriever, "payload") and hasattr(retriever, "embedder"):
+            retriever = HybridRetriever(retriever.index, retriever.payload, retriever.embedder, alpha=alpha)
+        else:
+            raise TypeError("retriever must be HybridRetriever-compatible")
 
-    Returns
-    -------
-    A grounded answer string, or :data:`FALLBACK` when no evidence is found.
-    """
-    question = (question or "").strip()
-    if not question:
-        logger.warning("Empty question received; returning fallback.")
-        return FALLBACK
+    intent = parse_query(question, _paper_map(retriever))
+    retrieval_query = build_retrieval_query(intent)
 
-    query_type = classify_query(question)
-    paper_id = extract_paper_id(question)
-    section = extract_section(question)
-
-    logger.debug("query_type=%s paper_id=%s section=%s", query_type, paper_id, section)
-
-    # --- Structured metadata paths -------------------------------------------
-    if query_type == "list_papers":
-        return list_papers(retriever)
-    if query_type == "disease_query":
-        return disease_response(retriever, paper_id)
-
-    # --- Vector retrieval path -----------------------------------------------
-    processed = preprocess_query(question)
-    retrieval_query = processed["clean_query"]
-
-    if query_type == "paper_section_query" and section:
-        retrieval_query = f"{section} of research paper"
-
-    result = retriever.retrieve(
-        retrieval_query,
-        source_filter=processed["source_filter"],
-        section_filter=section if query_type == "paper_section_query" else None,
-        top_k=top_k,
+    debug_dump(
+        "query",
+        {
+            "detected_intent": intent.intent,
+            "detected_paper": intent.paper_source or intent.paper_label,
+            "detected_section": intent.section,
+            "metadata_filters": intent.filters,
+            "retrieval_query": retrieval_query,
+        },
+        verbose,
     )
 
-    if not result.context:
-        logger.info("No relevant context found for question: %r", question)
+    if intent.intent == "list_papers":
+        return _list_papers_answer(retriever)
+    if intent.intent == "metadata_query":
+        return _metadata_answer(intent, retriever)
+
+    result = retriever.retrieve(retrieval_query, intent, top_k=top_k, alpha=alpha)
+    debug_dump("retrieval", result.debug, verbose)
+    if not result.chunks:
         return FALLBACK
 
-    if verbose:
-        _log_chunks(result.chunks)
+    if intent.intent in {"paper_lookup", "section_lookup"} and not load_groq_api_key(Path.cwd()):
+        return _format_direct_section(result)
 
-    # --- LLM synthesis -------------------------------------------------------
-    api_key = os.getenv("GROQ_API_KEY")
-    if not api_key:
-        # Retrieval still works without a key; useful in integration tests.
-        logger.warning("GROQ_API_KEY not set; returning raw retrieved context.")
-        return result.context
-
-    return _call_groq(question, result.context, model, api_key)
-
-
-def _call_groq(question: str, context: str, model: str, api_key: str) -> str:
-    """Send a grounded QA prompt to the Groq API and return the answer text."""
-    try:
-        from groq import Groq  # Late import: optional dependency.
-    except ImportError as exc:
-        raise RuntimeError(
-            "The 'groq' package is required for LLM synthesis. "
-            "Install it with:  pip install groq"
-        ) from exc
-
-    prompt = (
-        f"Answer the question using ONLY the context below.\n"
-        f'If the answer is absent, reply exactly: "{FALLBACK}"\n'
-        f"Include the source and section for every factual claim. "
-        f"Do not use outside knowledge.\n\n"
-        f"CONTEXT\n{context}\n\n"
-        f"QUESTION\n{question}"
-    )
-
-    try:
-        client = Groq(api_key=api_key)
-        response = client.chat.completions.create(
-            model=model,
-            temperature=0,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-        )
-        answer = (response.choices[0].message.content or "").strip()
-        return answer or FALLBACK
-    except Exception as exc:  # pragma: no cover
-        logger.error("Groq API call failed: %s", exc)
-        raise
-
-
-def _log_chunks(chunks: list[dict]) -> None:
-    """Write retrieved chunk metadata to *stderr* for debugging."""
-    print("\n── Retrieved chunks ──", file=sys.stderr)
-    for i, chunk in enumerate(chunks, 1):
-        print(
-            f"  [{i}] source={chunk.get('source')} "
-            f"section={chunk.get('section')} "
-            f"page={chunk.get('page_number')} "
-            f"score={chunk.get('final_score', chunk.get('rerank_score', '?')):.4f}",
-            file=sys.stderr,
-        )
-    print("─────────────────────\n", file=sys.stderr)
-
-
-# ---------------------------------------------------------------------------
-# CLI entry point
-# ---------------------------------------------------------------------------
+    return answer_with_groq(question, result.context, model=model)
 
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="qa_cli",
-        description="Query the synchronized medical RAG index.",
+        description="Query the medical RAG index.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
-    parser.add_argument(
-        "question",
-        nargs="?",
-        help="Question to answer. Omit for interactive REPL mode.",
-    )
-    parser.add_argument(
-        "--index-dir",
-        default=str(Settings().index_dir),
-        metavar="PATH",
-        help="Path to the FAISS index directory.",
-    )
-    parser.add_argument(
-        "--model",
-        default="llama-3.1-8b-instant",
-        metavar="NAME",
-        help="Groq model identifier.",
-    )
-    parser.add_argument(
-        "--top-k",
-        type=int,
-        default=3,
-        metavar="INT",
-        help="Number of chunks to surface per query.",
-    )
-    parser.add_argument(
-        "--verbose",
-        action="store_true",
-        help="Print retrieved chunk metadata before the answer.",
-    )
-    parser.add_argument(
-        "--log-level",
-        default="WARNING",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
-        help="Python logging level.",
-    )
+    parser.add_argument("question", nargs="?", help="Question to answer. Omit for interactive mode.")
+    parser.add_argument("--index-dir", default=str(Settings().index_dir), metavar="PATH")
+    parser.add_argument("--model", default="llama-3.1-8b-instant", metavar="NAME")
+    parser.add_argument("--top-k", type=int, default=5, metavar="INT")
+    parser.add_argument("--alpha", type=float, default=0.55, metavar="FLOAT")
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--log-level", default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return parser
 
 
-def main() -> None:  # pragma: no cover
+def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
-
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(levelname)s %(name)s: %(message)s",
-    )
+    logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s %(name)s: %(message)s")
 
     try:
-        retriever = RAGRetriever.load(args.index_dir)
-    except (FileNotFoundError, ValueError) as exc:
+        retriever = HybridRetriever.load(args.index_dir, alpha=args.alpha)
+    except Exception as exc:  # noqa: BLE001
         sys.exit(f"[ERROR] Could not load index from '{args.index_dir}': {exc}")
 
     if args.question:
-        print(
-            answer_question(
-                args.question,
-                retriever,
-                args.model,
-                top_k=args.top_k,
-                verbose=args.verbose,
-            )
-        )
+        print(answer_question(args.question, retriever, args.model, top_k=args.top_k, alpha=args.alpha, verbose=args.verbose))
         return
 
-    # ── Interactive REPL ──────────────────────────────────────────────────────
-    print("Medical RAG — interactive mode  (type 'quit' or Ctrl-D to exit)\n")
+    print("Medical RAG interactive mode (type 'quit' or Ctrl-D to exit)\n")
     while True:
         try:
             question = input("Question: ").strip()
@@ -457,21 +154,8 @@ def main() -> None:  # pragma: no cover
             break
         if question.lower() in {"quit", "exit", "q"}:
             break
-        if not question:
-            continue
-        try:
-            print(
-                answer_question(
-                    question,
-                    retriever,
-                    args.model,
-                    top_k=args.top_k,
-                    verbose=args.verbose,
-                )
-            )
-        except Exception as exc:  # noqa: BLE001
-            print(f"[ERROR] {exc}", file=sys.stderr)
-    print()
+        if question:
+            print(answer_question(question, retriever, args.model, top_k=args.top_k, alpha=args.alpha, verbose=args.verbose))
 
 
 if __name__ == "__main__":

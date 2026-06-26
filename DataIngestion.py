@@ -2,16 +2,29 @@
 
 Pipeline
 --------
-1. Discover all ``*.pdf`` files under *pdf_dir* (recursive).
-2. Extract page text via ``pypdf``.
-3. Sentence-chunk each PDF with section detection.
-4. Filter weak chunks (too short or mostly non-alphabetic).
-5. Wire doubly-linked chunk IDs.
-6. Encode all chunks with :class:`PubMedEmbedder` and add to a FAISS
-   ``IndexFlatIP`` index.
-7. Build a TF-IDF ``(1,2)``-gram matrix for keyword re-scoring at query time.
-8. Serialise FAISS vectors, a metadata pickle, and a human-readable JSON
-   manifest to *output_dir*.
+1.  Discover all ``*.pdf`` files under *pdf_dir* (recursive).
+2.  Extract page text via ``pypdf``.
+3.  Extract document-level metadata heuristically (DOI, PMID, year, journal,
+    diseases, genes, study designs).
+4.  Produce **content chunks** (sentence/section-aware) and **metadata chunks**
+    (one chunk per structured field + abstract) using the dual-strategy chunker.
+5.  Filter weak chunks (too short, too noisy, or non-alphabetic) — but always
+    keep metadata chunks, which are short by design.
+6.  Wire doubly-linked chunk IDs on the surviving content chunks.
+7.  Encode all chunks with :class:`PubMedEmbedder` (chunk-type-prefix aware).
+8.  Build a FAISS ``IndexFlatIP`` over the unit-normalised vectors.
+9.  Build a TF-IDF ``(1,2)``-gram matrix for keyword re-scoring at query time.
+10. Serialise FAISS vectors, a metadata pickle, and a human-readable JSON
+    manifest to *output_dir*.
+
+The payload pickle is the authoritative artefact consumed by the retriever.
+It carries:
+- ``records``                – all kept chunk dicts (content + metadata)
+- ``id_to_position``         – chunk_id → FAISS row index
+- ``tfidf_vectorizer``       – fitted sklearn TfidfVectorizer
+- ``tfidf_matrix``           – scipy sparse matrix (n_chunks × n_features)
+- ``doc_metadata_index``     – source_stem → extracted metadata dict
+- ``schema_version``         – int version tag for forward-compatibility checks
 
 Public API
 ----------
@@ -37,8 +50,12 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 
 from rag_system.ingestion.chunking import PageText, chunk_pages, wire_neighbors
 from rag_system.ingestion.embedding import PubMedEmbedder
+from rag_system.metadata import build_paper_map, extract_document_metadata, normalize_record
 from rag_system.utils.config import Settings
-from rag_system.utils.preprocessing import normalize_for_embedding, token_count
+from rag_system.utils.preprocessing import (
+    normalize_for_embedding,
+    token_count,
+)
 
 log = logging.getLogger(__name__)
 
@@ -46,11 +63,11 @@ log = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-#: Minimum ratio of alphabetic characters for a chunk to be considered prose.
+#: Minimum ratio of alphabetic characters for a **content** chunk.
 _MIN_ALPHA_RATIO: float = 0.45
 
-#: Payload schema version; bump when the pickle format changes.
-_SCHEMA_VERSION: int = 1
+#: Payload schema version — bump when the pickle format changes.
+_SCHEMA_VERSION: int = 3
 
 #: Preprocessing tag embedded in the payload for compatibility checks.
 _PREPROCESSING_TAG: str = "normalize_for_embedding:v1"
@@ -107,12 +124,19 @@ def load_pdf(path: Path) -> list[PageText]:
 def _is_quality_chunk(chunk: dict, min_tokens: int) -> bool:
     """Return ``True`` when the chunk meets minimum quality criteria.
 
-    Criteria
-    --------
+    Metadata chunks always pass so that structured field information is never
+    silently dropped.
+
+    Criteria for **content** chunks
+    --------------------------------
     1. Token count ≥ *min_tokens*.
     2. Alphabetic character ratio ≥ :data:`_MIN_ALPHA_RATIO` (filters OCR
        tables, header/footer lines, numeric-heavy boilerplate).
     """
+    # Metadata chunks are kept unconditionally — they are short by design.
+    if chunk.get("chunk_type") == "metadata":
+        return True
+
     text = chunk.get("text", "")
     if token_count(text) < min_tokens:
         return False
@@ -149,7 +173,7 @@ def ingest(
 
     Returns
     -------
-    Total number of chunks written to the index.
+    Total number of chunks written to the index (content + metadata).
 
     Raises
     ------
@@ -173,41 +197,79 @@ def ingest(
 
     log.info("Discovered %d PDF file(s) under '%s'", len(pdf_paths), pdf_dir)
 
-    # ------------------------------------------------------------------
-    # Stage 1 – Extract, chunk, and filter
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
+    # Stage 1 – Extract, chunk, filter
+    # -----------------------------------------------------------------------
     all_records: list[dict] = []
     per_pdf_stats: list[dict] = []
+    doc_metadata_index: dict[str, dict] = {}
+    paper_map = build_paper_map(pdf_paths)
+    source_to_paper = {filename: label for label, filename in paper_map.items()}
 
     for pdf_path in pdf_paths:
         source = pdf_path.name
+        paper_id = source_to_paper.get(source, pdf_path.stem)
+        source_stem = pdf_path.stem
         try:
             pages = load_pdf(pdf_path)
         except (FileNotFoundError, ValueError) as exc:
             log.warning("Skipping '%s': %s", source, exc)
             continue
 
+        # ── Document-level metadata extraction ─────────────────────────────
+        full_text = "\n".join(p.text for p in sorted(pages, key=lambda p: p.page_number))
+        doc_meta = extract_document_metadata(full_text, source=source, paper_id=paper_id)
+        doc_metadata_index[source] = doc_meta
+        doc_metadata_index[source_stem] = doc_meta
+        doc_metadata_index[paper_id] = doc_meta
+        log.info(
+            "  %s: diseases=%s  genes=%s  year=%s",
+            source,
+            doc_meta.get("diseases", []),
+            doc_meta.get("genes", []),
+            doc_meta.get("year"),
+        )
+
+        # ── Dual-strategy chunking (content + metadata) ─────────────────────
         candidates = chunk_pages(
             pages,
             source=source,
             chunk_size=settings.chunk_size,
             overlap=settings.chunk_overlap,
+            doc_metadata=doc_meta,
         )
+        candidates = [
+            normalize_record(candidate, paper_id=paper_id, chunk_id=candidate.get("chunk_id"))
+            for candidate in candidates
+        ]
 
-        # Filter before wiring so every stored neighbour reference is resolvable.
+        # ── Quality filtering (metadata chunks always pass) ─────────────────
         kept = [c for c in candidates if _is_quality_chunk(c, settings.min_chunk_tokens)]
+
+        # ── Wire neighbour IDs on content chunks only ───────────────────────
         wire_neighbors(kept)
+        for chunk in kept:
+            chunk["previous_chunk"] = chunk.get("prev_chunk_id")
+            chunk["next_chunk"] = chunk.get("next_chunk_id")
 
         all_records.extend(kept)
+
+        n_content = sum(1 for c in kept if c.get("chunk_type") != "metadata")
+        n_meta = sum(1 for c in kept if c.get("chunk_type") == "metadata")
         per_pdf_stats.append(
-            {"source": source, "pages": len(pages), "raw_chunks": len(candidates), "kept_chunks": len(kept)}
+            {
+                "source":         source,
+                "pages":          len(pages),
+                "raw_chunks":     len(candidates),
+                "kept_content":   n_content,
+                "kept_metadata":  n_meta,
+                "kept_total":     len(kept),
+                "doc_metadata":   doc_meta,
+            }
         )
         log.info(
-            "  %s: %d pages → %d raw chunks → %d kept",
-            source,
-            len(pages),
-            len(candidates),
-            len(kept),
+            "  %s: %d pages → %d raw → %d content + %d metadata chunks kept",
+            source, len(pages), len(candidates), n_content, n_meta,
         )
 
     if not all_records:
@@ -216,29 +278,36 @@ def ingest(
             "Check that PDFs contain extractable text and that min_chunk_tokens is not too high."
         )
 
-    log.info("Total chunks after filtering: %d", len(all_records))
+    log.info(
+        "Total chunks after filtering: %d  (%d content, %d metadata)",
+        len(all_records),
+        sum(1 for c in all_records if c.get("chunk_type") != "metadata"),
+        sum(1 for c in all_records if c.get("chunk_type") == "metadata"),
+    )
 
-    # ------------------------------------------------------------------
-    # Stage 2 – Encode with PubMedEmbedder
-    # ------------------------------------------------------------------
-    embedder = PubMedEmbedder(settings.model_name)
-    texts = [item["text"] for item in all_records]
+    # -----------------------------------------------------------------------
+    # Stage 2 – Encode with PubMedEmbedder (chunk-type aware)
+    # -----------------------------------------------------------------------
+    embedder = PubMedEmbedder(settings.model_name, use_prefixes=True)
 
-    log.info("Encoding %d chunks (batch_size=%d)…", len(texts), settings.embedding_batch_size)
-    vectors: np.ndarray = embedder.encode(texts, batch_size=settings.embedding_batch_size)
+    log.info("Encoding %d chunks (batch_size=%d)…", len(all_records), settings.embedding_batch_size)
+    vectors: np.ndarray = embedder.encode_chunks(
+        all_records,
+        batch_size=settings.embedding_batch_size,
+    )
 
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     # Stage 3 – Build FAISS index
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     index = faiss.IndexFlatIP(embedder.dimension)
     index.add(vectors)
     log.info("FAISS IndexFlatIP ready — ntotal=%d, dim=%d", index.ntotal, index.d)
 
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     # Stage 4 – Build TF-IDF matrix
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     log.info("Fitting TF-IDF vectoriser…")
-    normalised_texts = [normalize_for_embedding(t) for t in texts]
+    normalised_texts = [normalize_for_embedding(c["text"]) for c in all_records]
     tfidf = TfidfVectorizer(
         ngram_range=(1, 2),
         min_df=1,
@@ -253,9 +322,9 @@ def ingest(
         keyword_matrix.shape[1],
     )
 
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     # Stage 5 – Serialise outputs
-    # ------------------------------------------------------------------
+    # -----------------------------------------------------------------------
     index_dir = output_dir / "faiss_index"
     index_dir.mkdir(parents=True, exist_ok=True)
 
@@ -264,7 +333,7 @@ def ingest(
     faiss.write_index(index, str(vectors_path))
     log.info("FAISS index written to '%s'", vectors_path)
 
-    # 5b — Metadata pickle
+    # 5b — Metadata pickle (the authoritative retrieval payload)
     payload: dict = {
         "schema_version":      _SCHEMA_VERSION,
         "model_name":          settings.model_name,
@@ -274,6 +343,8 @@ def ingest(
         "id_to_position":      {item["chunk_id"]: i for i, item in enumerate(all_records)},
         "tfidf_vectorizer":    tfidf,
         "tfidf_matrix":        keyword_matrix,
+        "doc_metadata_index":  doc_metadata_index,
+        "paper_map":           paper_map,
         "per_pdf_stats":       per_pdf_stats,
         "settings":            settings.to_dict(),
     }
@@ -282,11 +353,17 @@ def ingest(
         pickle.dump(payload, fh, protocol=pickle.HIGHEST_PROTOCOL)
     log.info("Metadata pickle written to '%s'", metadata_path)
 
-    # 5c — Human-readable JSON manifest (records only; no numpy/scipy objects)
+    # 5c — Human-readable JSON manifest
     manifest_path = output_dir / "chunks_manifest.json"
     with manifest_path.open("w", encoding="utf-8") as fh:
         json.dump(all_records, fh, ensure_ascii=False, indent=2, default=str)
     log.info("Chunk manifest written to '%s'", manifest_path)
+
+    # 5d — Doc metadata index (separate JSON for easy inspection)
+    doc_meta_path = output_dir / "doc_metadata_index.json"
+    with doc_meta_path.open("w", encoding="utf-8") as fh:
+        json.dump(doc_metadata_index, fh, ensure_ascii=False, indent=2)
+    log.info("Doc metadata index written to '%s'", doc_meta_path)
 
     elapsed = time.perf_counter() - t0
     log.info(
@@ -355,7 +432,7 @@ def _build_parser() -> argparse.ArgumentParser:
         type=int,
         default=40,
         metavar="INT",
-        help="Minimum token count for a chunk to be indexed.",
+        help="Minimum token count for a content chunk to be indexed.",
     )
     parser.add_argument(
         "--log-level",

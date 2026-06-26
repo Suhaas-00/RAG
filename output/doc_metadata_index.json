@@ -1,0 +1,1022 @@
+{
+  "24868098.pdf": {
+    "source": "24868098.pdf",
+    "paper_id": "paper 1",
+    "doi": "10.1634/theoncologist.2014-0089",
+    "pmid": null,
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "pneumonia"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "phase iii",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "24868098": {
+    "source": "24868098.pdf",
+    "paper_id": "paper 1",
+    "doi": "10.1634/theoncologist.2014-0089",
+    "pmid": null,
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "pneumonia"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "phase iii",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "paper 1": {
+    "source": "24868098.pdf",
+    "paper_id": "paper 1",
+    "doi": "10.1634/theoncologist.2014-0089",
+    "pmid": null,
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "pneumonia"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "phase iii",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "25923550.pdf": {
+    "source": "25923550.pdf",
+    "paper_id": "paper 2",
+    "doi": "10.1056/NEJMoa1413654",
+    "pmid": null,
+    "year": "2015",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "diabetes",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "open-label",
+      "phase 1",
+      "phase 2",
+      "phase 3",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomised",
+      "randomized"
+    ]
+  },
+  "25923550": {
+    "source": "25923550.pdf",
+    "paper_id": "paper 2",
+    "doi": "10.1056/NEJMoa1413654",
+    "pmid": null,
+    "year": "2015",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "diabetes",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "open-label",
+      "phase 1",
+      "phase 2",
+      "phase 3",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomised",
+      "randomized"
+    ]
+  },
+  "paper 2": {
+    "source": "25923550.pdf",
+    "paper_id": "paper 2",
+    "doi": "10.1056/NEJMoa1413654",
+    "pmid": null,
+    "year": "2015",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "diabetes",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "open-label",
+      "phase 1",
+      "phase 2",
+      "phase 3",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomised",
+      "randomized"
+    ]
+  },
+  "25939061.pdf": {
+    "source": "25939061.pdf",
+    "paper_id": "paper 3",
+    "doi": "10.1038/nm.3854",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "L858R",
+      "MET",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "phase i"
+    ]
+  },
+  "25939061": {
+    "source": "25939061.pdf",
+    "paper_id": "paper 3",
+    "doi": "10.1038/nm.3854",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "L858R",
+      "MET",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "phase i"
+    ]
+  },
+  "paper 3": {
+    "source": "25939061.pdf",
+    "paper_id": "paper 3",
+    "doi": "10.1038/nm.3854",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "L858R",
+      "MET",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "phase i"
+    ]
+  },
+  "27022036.pdf": {
+    "source": "27022036.pdf",
+    "paper_id": "paper 4",
+    "doi": null,
+    "pmid": null,
+    "year": "2009",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "RET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase i"
+    ]
+  },
+  "27022036": {
+    "source": "27022036.pdf",
+    "paper_id": "paper 4",
+    "doi": null,
+    "pmid": null,
+    "year": "2009",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "RET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase i"
+    ]
+  },
+  "paper 4": {
+    "source": "27022036.pdf",
+    "paper_id": "paper 4",
+    "doi": null,
+    "pmid": null,
+    "year": "2009",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "RET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase i"
+    ]
+  },
+  "27343442.pdf": {
+    "source": "27343442.pdf",
+    "paper_id": "paper 5",
+    "doi": "10.1016/j.jtho.2016.06.013",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial"
+    ]
+  },
+  "27343442": {
+    "source": "27343442.pdf",
+    "paper_id": "paper 5",
+    "doi": "10.1016/j.jtho.2016.06.013",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial"
+    ]
+  },
+  "paper 5": {
+    "source": "27343442.pdf",
+    "paper_id": "paper 5",
+    "doi": "10.1016/j.jtho.2016.06.013",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial"
+    ]
+  },
+  "27694386.pdf": {
+    "source": "27694386.pdf",
+    "paper_id": "paper 6",
+    "doi": "10.1158/2159-8290.CD-16-0686",
+    "pmid": null,
+    "year": "2017",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "leukemia",
+      "melanoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "FGFR1",
+      "FGFR2",
+      "FGFR3",
+      "MET",
+      "NTRK1",
+      "RET",
+      "ROS1",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomized"
+    ]
+  },
+  "27694386": {
+    "source": "27694386.pdf",
+    "paper_id": "paper 6",
+    "doi": "10.1158/2159-8290.CD-16-0686",
+    "pmid": null,
+    "year": "2017",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "leukemia",
+      "melanoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "FGFR1",
+      "FGFR2",
+      "FGFR3",
+      "MET",
+      "NTRK1",
+      "RET",
+      "ROS1",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomized"
+    ]
+  },
+  "paper 6": {
+    "source": "27694386.pdf",
+    "paper_id": "paper 6",
+    "doi": "10.1158/2159-8290.CD-16-0686",
+    "pmid": null,
+    "year": "2017",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "leukemia",
+      "melanoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "FGFR1",
+      "FGFR2",
+      "FGFR3",
+      "MET",
+      "NTRK1",
+      "RET",
+      "ROS1",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase i",
+      "phase ii",
+      "phase iii",
+      "randomized"
+    ]
+  },
+  "31254668.pdf": {
+    "source": "31254668.pdf",
+    "paper_id": "paper 7",
+    "doi": "10.1016/j.jtho.2019.06.015",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "HER2",
+      "L858R",
+      "RET",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii"
+    ]
+  },
+  "31254668": {
+    "source": "31254668.pdf",
+    "paper_id": "paper 7",
+    "doi": "10.1016/j.jtho.2019.06.015",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "HER2",
+      "L858R",
+      "RET",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii"
+    ]
+  },
+  "paper 7": {
+    "source": "31254668.pdf",
+    "paper_id": "paper 7",
+    "doi": "10.1016/j.jtho.2019.06.015",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "HER2",
+      "L858R",
+      "RET",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii"
+    ]
+  },
+  "31416808.pdf": {
+    "source": "31416808.pdf",
+    "paper_id": "paper 8",
+    "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
+    "pmid": null,
+    "year": "2026",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "glioblastoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase 1",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "31416808": {
+    "source": "31416808.pdf",
+    "paper_id": "paper 8",
+    "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
+    "pmid": null,
+    "year": "2026",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "glioblastoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase 1",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "paper 8": {
+    "source": "31416808.pdf",
+    "paper_id": "paper 8",
+    "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
+    "pmid": null,
+    "year": "2026",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "glioblastoma",
+      "lymphoma",
+      "non-small cell lung cancer",
+      "nsclc",
+      "small cell lung cancer"
+    ],
+    "genes": [
+      "ALK",
+      "BRAF",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "ROS1"
+    ],
+    "study_designs": [
+      "cohort",
+      "phase 1",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "31825714.pdf": {
+    "source": "31825714.pdf",
+    "paper_id": "paper 9",
+    "doi": "10.1200/JCO.19",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "31825714": {
+    "source": "31825714.pdf",
+    "paper_id": "paper 9",
+    "doi": "10.1200/JCO.19",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "paper 9": {
+    "source": "31825714.pdf",
+    "paper_id": "paper 9",
+    "doi": "10.1200/JCO.19",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "T790M"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "32469185.pdf": {
+    "source": "32469185.pdf",
+    "paper_id": "paper 10",
+    "doi": "10.1056/NEJMoa2004407",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "32469185": {
+    "source": "32469185.pdf",
+    "paper_id": "paper 10",
+    "doi": "10.1056/NEJMoa2004407",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "paper 10": {
+    "source": "32469185.pdf",
+    "paper_id": "paper 10",
+    "doi": "10.1056/NEJMoa2004407",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "carcinoma",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "ALK",
+      "EGFR",
+      "KRAS",
+      "MET",
+      "PTEN",
+      "ROS1",
+      "TP53"
+    ],
+    "study_designs": [
+      "cohort",
+      "open-label",
+      "phase 2",
+      "phase i",
+      "phase ii",
+      "prospective",
+      "retrospective"
+    ]
+  },
+  "32969527.pdf": {
+    "source": "32969527.pdf",
+    "paper_id": "paper 11",
+    "doi": "10.1002/onco.13537",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "L858R",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase\nii",
+      "phase\niii",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "32969527": {
+    "source": "32969527.pdf",
+    "paper_id": "paper 11",
+    "doi": "10.1002/onco.13537",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "L858R",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase\nii",
+      "phase\niii",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  },
+  "paper 11": {
+    "source": "32969527.pdf",
+    "paper_id": "paper 11",
+    "doi": "10.1002/onco.13537",
+    "pmid": null,
+    "year": "2021",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "KRAS",
+      "L858R",
+      "T790M",
+      "TP53"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "cohort",
+      "open-label",
+      "phase\nii",
+      "phase\niii",
+      "phase 2",
+      "phase 3",
+      "phase ii",
+      "phase iii",
+      "prospective",
+      "randomised",
+      "randomized",
+      "retrospective"
+    ]
+  }
+}
