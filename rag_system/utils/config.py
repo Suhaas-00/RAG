@@ -18,7 +18,7 @@ Environment variables (optional overrides)
 -----------------------------------------
 ``RAG_MODEL_NAME``          – HuggingFace embedding model identifier.
 ``RAG_PDF_DIR``             – Directory containing source PDFs.
-``RAG_OUTPUT_DIR``          – Root output directory (index lives at output/faiss_index).
+``RAG_OUTPUT_DIR``          – Root output directory (index lives at outputs/index/faiss_index).
 ``RAG_CHUNK_SIZE``          – Approximate token size of each chunk.
 ``RAG_CHUNK_OVERLAP``       – Token overlap between consecutive chunks.
 ``RAG_EMBEDDING_BATCH``     – Number of texts to encode per batch.
@@ -50,6 +50,15 @@ _ENV_PREFIX = "RAG_"
 def _env(name: str, default: str) -> str:
     """Return the environment variable ``RAG_<NAME>`` or *default*."""
     return os.environ.get(f"{_ENV_PREFIX}{name}", default)
+
+
+def _existing_or_default(primary: str, legacy: str) -> Path:
+    """Prefer the organized path, but keep older checkouts runnable."""
+    primary_path = Path(primary)
+    legacy_path = Path(legacy)
+    if primary_path.exists() or not legacy_path.exists():
+        return primary_path
+    return legacy_path
 
 
 # ---------------------------------------------------------------------------
@@ -96,8 +105,8 @@ class Settings:
     """
 
     model_name: str = "NeuML/pubmedbert-base-embeddings"
-    pdf_dir: Path = field(default_factory=lambda: Path("pdfs"))
-    output_dir: Path = field(default_factory=lambda: Path("output"))
+    pdf_dir: Path = field(default_factory=lambda: _existing_or_default("datasets/raw/pdfs", "pdfs"))
+    output_dir: Path = field(default_factory=lambda: _existing_or_default("outputs/index", "output"))
     chunk_size: int = 400
     chunk_overlap: int = 64
     embedding_batch_size: int = 32
@@ -191,8 +200,8 @@ class Settings:
         """
         return cls(
             model_name=_env("MODEL_NAME", "NeuML/pubmedbert-base-embeddings"),
-            pdf_dir=Path(_env("PDF_DIR", "pdfs")),
-            output_dir=Path(_env("OUTPUT_DIR", "output")),
+            pdf_dir=Path(_env("PDF_DIR", str(_existing_or_default("datasets/raw/pdfs", "pdfs")))),
+            output_dir=Path(_env("OUTPUT_DIR", str(_existing_or_default("outputs/index", "output")))),
             chunk_size=int(_env("CHUNK_SIZE", "400")),
             chunk_overlap=int(_env("CHUNK_OVERLAP", "64")),
             embedding_batch_size=int(_env("EMBEDDING_BATCH", "32")),

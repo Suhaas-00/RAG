@@ -27,8 +27,8 @@ import pandas as pd
 # Configuration – edit these values as needed
 # ---------------------------------------------------------------------------
 
-INPUT_EXCEL:  str   = "questions.xlsx"        # Path to the input questions file
-OUTPUT_EXCEL: str   = "rag_results.xlsx"      # Path for the output results file
+INPUT_EXCEL:  str   = "datasets/questions/questions.xlsx"  # Path to the input questions file
+OUTPUT_EXCEL: str   = "outputs/reports/rag_results.xlsx"   # Path for the output results file
 MODEL:        str   = "llama-3.1-8b-instant"  # Groq model identifier
 TOP_K:        int   = 5                       # Number of chunks to retrieve per question
 ALPHA:        float = 0.55                    # Hybrid retrieval weight (dense vs sparse)
@@ -155,6 +155,8 @@ def load_questions(path: str) -> pd.DataFrame:
         When required columns are absent.
     """
     p = Path(path)
+    if not p.exists() and path == INPUT_EXCEL and Path("questions.xlsx").exists():
+        p = Path("questions.xlsx")
     if not p.exists():
         raise FileNotFoundError(f"Input Excel not found: {p.resolve()}")
 
@@ -234,10 +236,13 @@ def save_results(rows: list[dict[str, Any]], path: str) -> None:
     path : str
         Destination .xlsx file path.
     """
+    output_path = Path(path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
     detail_df  = pd.DataFrame(rows, columns=OUTPUT_COLUMNS)
     summary_df = pd.DataFrame(build_summary_rows(rows), columns=SUMMARY_COLUMNS)
 
-    with pd.ExcelWriter(path, engine="openpyxl") as writer:
+    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
         detail_df.to_excel(writer,  sheet_name="Detailed Results", index=False)
         summary_df.to_excel(writer, sheet_name="Summary",          index=False)
 

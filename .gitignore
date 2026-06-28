@@ -1,4 +1,25 @@
-# Ignore all files with a specific extension
+# Local environment and secrets
+.env
 *.env
-/chroma_db
-/pdfs
+
+# Python cache and test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Generated data and runtime artifacts
+/chroma_db/
+/output/
+/logs/
+*.log
+
+# Temporary editor/OS files
+~$*
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

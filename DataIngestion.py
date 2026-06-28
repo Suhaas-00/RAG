@@ -73,6 +73,13 @@ _SCHEMA_VERSION: int = 3
 _PREPROCESSING_TAG: str = "normalize_for_embedding:v1"
 
 
+def _existing_or_default(primary: str, legacy: str) -> str:
+    """Prefer the organized path, but keep older checkouts runnable."""
+    if Path(primary).exists() or not Path(legacy).exists():
+        return primary
+    return legacy
+
+
 # ---------------------------------------------------------------------------
 # PDF loading
 # ---------------------------------------------------------------------------
@@ -388,13 +395,13 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--pdf-dir",
-        default="pdfs",
+        default=_existing_or_default("datasets/raw/pdfs", "pdfs"),
         metavar="PATH",
         help="Directory containing source PDF files (searched recursively).",
     )
     parser.add_argument(
         "--output-dir",
-        default="output",
+        default=_existing_or_default("outputs/index", "output"),
         metavar="PATH",
         help="Root directory for index outputs.",
     )
