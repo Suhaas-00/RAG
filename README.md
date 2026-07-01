@@ -1,4 +1,4 @@
-﻿# Medical RAG
+﻿# MY RAG
 
 This repository contains a medical retrieval-augmented generation (RAG) pipeline for indexing research PDFs and answering questions against the built hybrid FAISS/keyword index.
 
