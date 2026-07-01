@@ -32,6 +32,7 @@ OUTPUT_EXCEL: str   = "outputs/reports/rag_results.xlsx"   # Path for the output
 MODEL:        str   = "llama-3.1-8b-instant"  # Groq model identifier
 TOP_K:        int   = 5                       # Number of chunks to retrieve per question
 ALPHA:        float = 0.55                    # Hybrid retrieval weight (dense vs sparse)
+ALLOW_GLOBAL_SEARCH: bool = False             # Explicitly allow unscoped corpus-wide retrieval
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -266,6 +267,7 @@ def process_question(
     top_k: int = TOP_K,
     model: str = MODEL,
     alpha: float = ALPHA,
+    allow_global_search: bool = ALLOW_GLOBAL_SEARCH,
 ) -> list[dict[str, Any]]:
     """
     Run retrieval and LLM generation for one question.
@@ -307,7 +309,13 @@ def process_question(
 
     # 2. Retrieve – signature from qa_cli.py:
     #    retriever.retrieve(retrieval_query, intent, top_k=top_k, alpha=alpha)
-    result = retriever.retrieve(retrieval_query, intent, top_k=top_k, alpha=alpha)
+    result = retriever.retrieve(
+        retrieval_query,
+        intent,
+        top_k=top_k,
+        alpha=alpha,
+        allow_global_search=allow_global_search,
+    )
 
     if not result.chunks:
         logger.warning("No chunks retrieved for SNo %s: '%s'", sno, question)
@@ -345,6 +353,7 @@ def run_bulk_inference(
     model:        str   = MODEL,
     top_k:        int   = TOP_K,
     alpha:        float = ALPHA,
+    allow_global_search: bool = ALLOW_GLOBAL_SEARCH,
 ) -> None:
     """
     Main entry-point: load index once, iterate over questions, write output.
@@ -370,7 +379,10 @@ def run_bulk_inference(
     # -----------------------------------------------------------------------
     start_time = time.perf_counter()
     logger.info("=== Medical RAG - Bulk Inference ===")
-    logger.info("model=%s  top_k=%d  alpha=%.2f", model, top_k, alpha)
+    logger.info(
+        "model=%s  top_k=%d  alpha=%.2f  allow_global_search=%s",
+        model, top_k, alpha, allow_global_search,
+    )
 
     # Load Groq API key (load_groq_api_key takes cwd as argument – from qa_cli.py)
     load_groq_api_key(Path.cwd())
@@ -383,7 +395,11 @@ def run_bulk_inference(
     # Load the RAG index ONCE and reuse for every question
     index_dir = str(Settings().index_dir)
     logger.info("Loading index from: %s", index_dir)
-    retriever: Any = HybridRetriever.load(index_dir, alpha=alpha)
+    retriever: Any = HybridRetriever.load(
+        index_dir,
+        alpha=alpha,
+        allow_global_search=allow_global_search,
+    )
     logger.info("Index loaded successfully.")
 
     # Build paper_map once (used by parse_query for paper-reference resolution)
@@ -412,6 +428,7 @@ def run_bulk_inference(
                 top_k=top_k,
                 model=model,
                 alpha=alpha,
+                allow_global_search=allow_global_search,
             )
             all_rows.extend(rows)
             logger.info("  -> %d chunk row(s) added for SNo %s.", len(rows), sno)
@@ -463,4 +480,5 @@ if __name__ == "__main__":
         model        = MODEL,
         top_k        = TOP_K,
         alpha        = ALPHA,
+        allow_global_search = ALLOW_GLOBAL_SEARCH,
     )

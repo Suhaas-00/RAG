@@ -74,13 +74,20 @@ def answer_question(
     top_k: int = 5,
     alpha: float = 0.55,
     verbose: bool = False,
+    allow_global_search: bool = False,
 ) -> str:
     """Answer a question while preserving the old public function signature."""
 
     if not isinstance(retriever, HybridRetriever):
         # Compatibility with old imports that still instantiate RAGRetriever.
         if hasattr(retriever, "index") and hasattr(retriever, "payload") and hasattr(retriever, "embedder"):
-            retriever = HybridRetriever(retriever.index, retriever.payload, retriever.embedder, alpha=alpha)
+            retriever = HybridRetriever(
+                retriever.index,
+                retriever.payload,
+                retriever.embedder,
+                alpha=alpha,
+                allow_global_search=allow_global_search,
+            )
         else:
             raise TypeError("retriever must be HybridRetriever-compatible")
 
@@ -104,7 +111,13 @@ def answer_question(
     if intent.intent == "metadata_query":
         return _metadata_answer(intent, retriever)
 
-    result = retriever.retrieve(retrieval_query, intent, top_k=top_k, alpha=alpha)
+    result = retriever.retrieve(
+        retrieval_query,
+        intent,
+        top_k=top_k,
+        alpha=alpha,
+        allow_global_search=allow_global_search,
+    )
     debug_dump("retrieval", result.debug, verbose)
     if not result.chunks:
         return FALLBACK
@@ -126,6 +139,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--model", default="llama-3.1-8b-instant", metavar="NAME")
     parser.add_argument("--top-k", type=int, default=5, metavar="INT")
     parser.add_argument("--alpha", type=float, default=0.55, metavar="FLOAT")
+    parser.add_argument(
+        "--global-search",
+        action="store_true",
+        help="Explicitly allow retrieval across all indexed documents when no document identifier is present.",
+    )
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--log-level", default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     return parser
@@ -137,12 +155,24 @@ def main() -> None:
     logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s %(name)s: %(message)s")
 
     try:
-        retriever = HybridRetriever.load(args.index_dir, alpha=args.alpha)
+        retriever = HybridRetriever.load(
+            args.index_dir,
+            alpha=args.alpha,
+            allow_global_search=args.global_search,
+        )
     except Exception as exc:  # noqa: BLE001
         sys.exit(f"[ERROR] Could not load index from '{args.index_dir}': {exc}")
 
     if args.question:
-        print(answer_question(args.question, retriever, args.model, top_k=args.top_k, alpha=args.alpha, verbose=args.verbose))
+        print(answer_question(
+            args.question,
+            retriever,
+            args.model,
+            top_k=args.top_k,
+            alpha=args.alpha,
+            verbose=args.verbose,
+            allow_global_search=args.global_search,
+        ))
         return
 
     print("Medical RAG interactive mode (type 'quit' or Ctrl-D to exit)\n")
@@ -155,7 +185,15 @@ def main() -> None:
         if question.lower() in {"quit", "exit", "q"}:
             break
         if question:
-            print(answer_question(question, retriever, args.model, top_k=args.top_k, alpha=args.alpha, verbose=args.verbose))
+            print(answer_question(
+                question,
+                retriever,
+                args.model,
+                top_k=args.top_k,
+                alpha=args.alpha,
+                verbose=args.verbose,
+                allow_global_search=args.global_search,
+            ))
 
 
 if __name__ == "__main__":

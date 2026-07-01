@@ -28,6 +28,9 @@ Environment variables (optional overrides)
 ``RAG_TOP_K``               – Final number of chunks returned to the caller.
 ``RAG_MAX_CONTEXT_TOKENS``  – Token budget for the LLM context window.
 ``RAG_MIN_CHUNK_TOKENS``    – Minimum tokens required to keep a chunk.
+``RAG_ENABLE_DOCUMENT_FILTERING`` – Enable strict document-scope retrieval.
+``RAG_DEFAULT_FILTER_MODE``       – ``document`` or ``global``.
+``RAG_ALLOW_GLOBAL_SEARCH``       – Permit unscoped global retrieval.
 """
 
 from __future__ import annotations
@@ -116,6 +119,9 @@ class Settings:
     top_k: int = 3
     max_context_tokens: int = 2000
     min_chunk_tokens: int = 40
+    enable_document_filtering: bool = True
+    default_filter_mode: str = "document"
+    allow_global_search: bool = False
 
     # ------------------------------------------------------------------
     # Derived properties
@@ -179,6 +185,11 @@ class Settings:
             raise ValueError(
                 f"embedding_batch_size must be ≥ 1, got {self.embedding_batch_size}"
             )
+        if self.default_filter_mode not in {"document", "global"}:
+            raise ValueError(
+                "default_filter_mode must be either 'document' or 'global', "
+                f"got {self.default_filter_mode!r}"
+            )
 
     # ------------------------------------------------------------------
     # Alternate constructors
@@ -211,6 +222,11 @@ class Settings:
             top_k=int(_env("TOP_K", "3")),
             max_context_tokens=int(_env("MAX_CONTEXT_TOKENS", "2000")),
             min_chunk_tokens=int(_env("MIN_CHUNK_TOKENS", "40")),
+            enable_document_filtering=_env("ENABLE_DOCUMENT_FILTERING", "true").lower()
+            in {"1", "true", "yes", "on"},
+            default_filter_mode=_env("DEFAULT_FILTER_MODE", "document").lower(),
+            allow_global_search=_env("ALLOW_GLOBAL_SEARCH", "false").lower()
+            in {"1", "true", "yes", "on"},
         )
 
     @classmethod

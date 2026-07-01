@@ -1,4 +1,4 @@
-"""Hybrid retriever: FAISS dense search + TF-IDF keyword re-scoring + metadata filtering.
+﻿"""Hybrid retriever: FAISS dense search + TF-IDF keyword re-scoring + metadata filtering.
 
 The :class:`RAGRetriever` loads the serialised payload produced by
 :mod:`rag_system.ingestion.DataIngestion` and exposes a single :meth:`retrieve`
@@ -9,14 +9,14 @@ method that:
    ``metadata`` fields match any supplied filters before FAISS search.
    Supported filters:
 
-   - ``source_filter``    – exact or substring match on the PDF filename.
-   - ``section_filter``   – exact match on the normalised section label.
-   - ``disease_filter``   – substring match against the chunk's metadata
+   - ``source_filter``    â€“ exact or substring match on the PDF filename.
+   - ``section_filter``   â€“ exact match on the normalised section label.
+   - ``disease_filter``   â€“ substring match against the chunk's metadata
                             diseases list.
-   - ``gene_filter``      – substring match against the chunk's metadata
+   - ``gene_filter``      â€“ substring match against the chunk's metadata
                             genes list.
-   - ``year_filter``      – exact match on the publication year string.
-   - ``chunk_type_filter``– ``"content"``, ``"metadata"``, or ``None`` for both.
+   - ``year_filter``      â€“ exact match on the publication year string.
+   - ``chunk_type_filter``â€“ ``"content"``, ``"metadata"``, or ``None`` for both.
 
 2. **Dense retrieval** (FAISS IndexFlatIP)
    Scores all filtered candidates by cosine similarity to the query vector.
@@ -26,19 +26,19 @@ method that:
    matches that the embedding model may under-rank.
 
 4. **Hybrid ranking**
-   ``final_score = α × dense_score + (1-α) × keyword_score``
-   where α is configurable (default 0.7).
+   ``final_score = Î± Ã— dense_score + (1-Î±) Ã— keyword_score``
+   where Î± is configurable (default 0.7).
 
 5. **Context assembly**
-   Top-k chunks are formatted as ``[Source: … | Section: … | Page: …]\n<text>``
+   Top-k chunks are formatted as ``[Source: â€¦ | Section: â€¦ | Page: â€¦]\n<text>``
    blocks joined by ``\n\n``.
 
 Public API
 ----------
-RetrievalResult(context, chunks)   – Named result container.
-RAGRetriever.load(index_dir)       – Load from serialised payload.
-RAGRetriever.retrieve(query, ...)  – Hybrid retrieval with metadata filtering.
-RAGRetriever.retrieve_by_metadata(filters) – Pure metadata-based retrieval
+RetrievalResult(context, chunks)   â€“ Named result container.
+RAGRetriever.load(index_dir)       â€“ Load from serialised payload.
+RAGRetriever.retrieve(query, ...)  â€“ Hybrid retrieval with metadata filtering.
+RAGRetriever.retrieve_by_metadata(filters) â€“ Pure metadata-based retrieval
                                             (no FAISS, no TF-IDF).
 """
 
@@ -54,6 +54,7 @@ import faiss
 import numpy as np
 
 from rag_system.ingestion.embedding import PubMedEmbedder
+from rag_system.retrieval.document_scope import filter_record_indices
 from rag_system.utils.preprocessing import normalize_for_embedding
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ logger = logging.getLogger(__name__)
 _MIN_SCHEMA_VERSION: int = 1
 # Weight for dense score in hybrid ranking.
 _DEFAULT_ALPHA: float = 0.7
-# Score floor — chunks below this combined score are dropped.
+# Score floor â€” chunks below this combined score are dropped.
 _SCORE_FLOOR: float = 0.0
 
 
@@ -95,7 +96,7 @@ class RetrievalResult:
 class RAGRetriever:
     """Hybrid retriever backed by a FAISS index and TF-IDF matrix.
 
-    Do not construct directly — use :meth:`load`.
+    Do not construct directly â€” use :meth:`load`.
 
     Parameters
     ----------
@@ -104,7 +105,7 @@ class RAGRetriever:
     embedder:   :class:`~rag_system.ingestion.embedding.PubMedEmbedder` instance
                 using the **same** model as ingestion.
     alpha:      Dense-score weight in hybrid ranking ``[0, 1]``.
-                ``alpha=1`` → pure dense; ``alpha=0`` → pure keyword.
+                ``alpha=1`` â†’ pure dense; ``alpha=0`` â†’ pure keyword.
     """
 
     def __init__(
@@ -114,11 +115,15 @@ class RAGRetriever:
         embedder: PubMedEmbedder,
         *,
         alpha: float = _DEFAULT_ALPHA,
+        enable_document_filtering: bool = True,
+        allow_global_search: bool = False,
     ) -> None:
         self.index = index
         self.payload = payload
         self.embedder = embedder
         self.alpha = alpha
+        self.enable_document_filtering = enable_document_filtering
+        self.allow_global_search = allow_global_search
 
         self._records: list[dict] = payload["records"]
         self._id_to_pos: dict[str, int] = payload["id_to_position"]
@@ -127,7 +132,7 @@ class RAGRetriever:
         self._doc_metadata_index: dict[str, dict] = payload.get("doc_metadata_index", {})
 
         logger.info(
-            "RAGRetriever ready — %d records, index.ntotal=%d",
+            "RAGRetriever ready â€” %d records, index.ntotal=%d",
             len(self._records),
             self.index.ntotal,
         )
@@ -137,7 +142,14 @@ class RAGRetriever:
     # ------------------------------------------------------------------
 
     @classmethod
-    def load(cls, index_dir: str | Path, *, alpha: float = _DEFAULT_ALPHA) -> "RAGRetriever":
+    def load(
+        cls,
+        index_dir: str | Path,
+        *,
+        alpha: float = _DEFAULT_ALPHA,
+        enable_document_filtering: bool = True,
+        allow_global_search: bool = False,
+    ) -> "RAGRetriever":
         """Load a retriever from the serialised payload in *index_dir*.
 
         Parameters
@@ -178,7 +190,14 @@ class RAGRetriever:
             )
 
         embedder = PubMedEmbedder(payload["model_name"], use_prefixes=True)
-        return cls(index, payload, embedder, alpha=alpha)
+        return cls(
+            index,
+            payload,
+            embedder,
+            alpha=alpha,
+            enable_document_filtering=enable_document_filtering,
+            allow_global_search=allow_global_search,
+        )
 
     # ------------------------------------------------------------------
     # Metadata filtering helpers
@@ -192,81 +211,34 @@ class RAGRetriever:
         gene_filter: Optional[str],
         year_filter: Optional[str],
         chunk_type_filter: Optional[str],
+        paper_id_filter: Optional[str] = None,
+        document_id_filter: Optional[str] = None,
+        allow_global_search: Optional[bool] = None,
     ) -> list[int]:
-        """Return FAISS row indices of records that pass all active filters.
-
-        If *no* filter is supplied, all indices are returned (no narrowing).
-        Filters are applied with AND logic (all must match).
-
-        Matching rules
-        --------------
-        source_filter     – case-insensitive substring in ``record["source"]``.
-        section_filter    – exact match on ``record["section"]`` after lowering.
-        disease_filter    – case-insensitive substring in any disease in
-                            ``record["metadata"]["diseases"]``.
-        gene_filter       – case-insensitive substring in any gene in
-                            ``record["metadata"]["genes"]``.
-        year_filter       – exact match on ``record["metadata"]["year"]``.
-        chunk_type_filter – exact match on ``record["chunk_type"]``.
-        """
-        has_filter = any(
-            f is not None for f in (
-                source_filter, section_filter, disease_filter,
-                gene_filter, year_filter, chunk_type_filter,
-            )
+        """Return FAISS row indices that pass document-scope and metadata filters."""
+        filters = {
+            "source": source_filter,
+            "section": section_filter,
+            "disease": disease_filter,
+            "gene": gene_filter,
+            "year": year_filter,
+            "chunk_type": chunk_type_filter,
+            "paper_id": paper_id_filter,
+            "document_id": document_id_filter,
+        }
+        filters = {key: value for key, value in filters.items() if value is not None}
+        indices = filter_record_indices(
+            self._records,
+            filters,
+            enable_document_filtering=self.enable_document_filtering,
+            allow_global_search=self.allow_global_search if allow_global_search is None else allow_global_search,
+            require_document_scope=True,
         )
-        if not has_filter:
-            return list(range(len(self._records)))
-
-        src_lower = source_filter.lower() if source_filter else None
-        sec_lower = section_filter.lower() if section_filter else None
-        dis_lower = disease_filter.lower() if disease_filter else None
-        gene_lower = gene_filter.lower() if gene_filter else None
-
-        indices: list[int] = []
-        for i, rec in enumerate(self._records):
-            # ── source ──────────────────────────────────────────────────────
-            if src_lower:
-                rec_src = str(rec.get("source", "")).lower()
-                if src_lower not in rec_src:
-                    continue
-
-            # ── section ─────────────────────────────────────────────────────
-            if sec_lower:
-                if str(rec.get("section", "")).lower() != sec_lower:
-                    continue
-
-            # ── chunk type ──────────────────────────────────────────────────
-            if chunk_type_filter:
-                if rec.get("chunk_type", "content") != chunk_type_filter:
-                    continue
-
-            # ── disease ─────────────────────────────────────────────────────
-            if dis_lower:
-                diseases = rec.get("metadata", {}).get("diseases", [])
-                if not any(dis_lower in d.lower() for d in diseases):
-                    continue
-
-            # ── gene ─────────────────────────────────────────────────────────
-            if gene_lower:
-                genes = rec.get("metadata", {}).get("genes", [])
-                if not any(gene_lower in g.lower() for g in genes):
-                    continue
-
-            # ── year ─────────────────────────────────────────────────────────
-            if year_filter:
-                rec_year = str(rec.get("metadata", {}).get("year", "") or "")
-                if rec_year != str(year_filter):
-                    continue
-
-            indices.append(i)
-
         logger.debug(
-            "_apply_metadata_filters: %d/%d records pass filters "
-            "(source=%r section=%r disease=%r gene=%r year=%r type=%r)",
-            len(indices), len(self._records),
-            source_filter, section_filter, disease_filter,
-            gene_filter, year_filter, chunk_type_filter,
+            "_apply_metadata_filters: %d/%d records pass filters %s",
+            len(indices),
+            len(self._records),
+            filters,
         )
         return indices
 
@@ -285,6 +257,9 @@ class RAGRetriever:
         gene_filter: Optional[str] = None,
         year_filter: Optional[str] = None,
         chunk_type_filter: Optional[str] = None,
+        paper_id_filter: Optional[str] = None,
+        document_id_filter: Optional[str] = None,
+        allow_global_search: Optional[bool] = None,
         alpha: Optional[float] = None,
     ) -> RetrievalResult:
         """Retrieve the *top_k* most relevant chunks for *query*.
@@ -325,7 +300,7 @@ class RAGRetriever:
 
         alpha = alpha if alpha is not None else self.alpha
 
-        # ── Step 1: metadata filter ──────────────────────────────────────────
+        # â”€â”€ Step 1: metadata filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         candidate_indices = self._apply_metadata_filters(
             source_filter=source_filter,
             section_filter=section_filter,
@@ -333,13 +308,16 @@ class RAGRetriever:
             gene_filter=gene_filter,
             year_filter=year_filter,
             chunk_type_filter=chunk_type_filter,
+            paper_id_filter=paper_id_filter,
+            document_id_filter=document_id_filter,
+            allow_global_search=allow_global_search,
         )
 
         if not candidate_indices:
             logger.info("No candidates after metadata filtering for query: %r", query)
             return RetrievalResult(context="", chunks=[])
 
-        # ── Step 2: dense retrieval over candidate pool ──────────────────────
+        # â”€â”€ Step 2: dense retrieval over candidate pool â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         query_vec = self.embedder.encode_query(query)          # shape (1, dim)
 
         # Build a temporary sub-index over filtered candidates.
@@ -362,13 +340,13 @@ class RAGRetriever:
         if not global_indices:
             return RetrievalResult(context="", chunks=[])
 
-        # ── Step 3: keyword re-scoring ───────────────────────────────────────
+        # â”€â”€ Step 3: keyword re-scoring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         query_tfidf = self._tfidf.transform([normalize_for_embedding(query)])
         # Retrieve TF-IDF rows for global candidates.
         tfidf_rows = self._tfidf_matrix[global_indices]
         keyword_scores = (tfidf_rows @ query_tfidf.T).toarray().flatten().tolist()
 
-        # ── Step 4: hybrid ranking ───────────────────────────────────────────
+        # â”€â”€ Step 4: hybrid ranking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         scored: list[tuple[float, int]] = []
         for dense, kw, gidx in zip(dense_scores, keyword_scores, global_indices):
             hybrid = alpha * float(dense) + (1.0 - alpha) * float(kw)
@@ -381,7 +359,7 @@ class RAGRetriever:
         if not top:
             return RetrievalResult(context="", chunks=[])
 
-        # ── Step 5: assemble context ─────────────────────────────────────────
+        # â”€â”€ Step 5: assemble context â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         result_chunks: list[dict] = []
         context_parts: list[str] = []
 
@@ -415,9 +393,12 @@ class RAGRetriever:
         gene_filter: Optional[str] = None,
         year_filter: Optional[str] = None,
         chunk_type_filter: Optional[str] = "metadata",
+        paper_id_filter: Optional[str] = None,
+        document_id_filter: Optional[str] = None,
+        allow_global_search: Optional[bool] = None,
         top_k: int = 10,
     ) -> RetrievalResult:
-        """Pure metadata retrieval — no FAISS dense search involved.
+        """Pure metadata retrieval â€” no FAISS dense search involved.
 
         Useful for listing all papers that mention a specific disease or gene,
         or for surfacing structured metadata chunks directly.
@@ -441,6 +422,9 @@ class RAGRetriever:
             gene_filter=gene_filter,
             year_filter=year_filter,
             chunk_type_filter=chunk_type_filter,
+            paper_id_filter=paper_id_filter,
+            document_id_filter=document_id_filter,
+            allow_global_search=allow_global_search,
         )
 
         result_chunks: list[dict] = []
@@ -471,3 +455,4 @@ class RAGRetriever:
         vec = np.zeros((1, self.embedder.dimension), dtype="float32")
         self.index.reconstruct(global_index, vec[0])
         return vec
+

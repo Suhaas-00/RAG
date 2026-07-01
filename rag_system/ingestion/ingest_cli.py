@@ -14,7 +14,7 @@ or, if registered as a console script in ``pyproject.toml``::
     rag-ingest [--pdf-dir PATH] [--output-dir PATH]
 """
 
-from rag_system.ingestion.DataIngestion import main
+from DataIngestion import main
 
 if __name__ == "__main__":
     main()

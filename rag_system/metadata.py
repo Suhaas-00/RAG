@@ -54,7 +54,9 @@ def extract_document_metadata(text: str, source: str, paper_id: str) -> dict:
     study_designs = sorted({m.group(0).lower() for m in STUDY_RE.finditer(text)})
     return {
         "source": source,
+        "filename": Path(source).name,
         "paper_id": paper_id,
+        "document_id": paper_id,
         "doi": doi.group(1).rstrip(".") if doi else None,
         "pmid": pmid.group(1) if pmid else None,
         "year": years[0] if years else None,
@@ -68,7 +70,9 @@ def normalize_record(record: dict, paper_id: str, chunk_id: str | None = None) -
     page = record.get("page", record.get("page_number"))
     normalized = dict(record)
     normalized["source"] = str(record.get("source", ""))
+    normalized["filename"] = Path(normalized["source"]).name if normalized["source"] else ""
     normalized["paper_id"] = str(record.get("paper_id") or paper_id)
+    normalized["document_id"] = str(record.get("document_id") or normalized["paper_id"])
     normalized["page"] = int(page or 1)
     normalized["page_number"] = normalized["page"]
     normalized["section"] = canonical_section(str(record.get("section") or "unknown"))
@@ -80,6 +84,15 @@ def normalize_record(record: dict, paper_id: str, chunk_id: str | None = None) -
     normalized["token_count"] = int(record.get("token_count") or 0)
     normalized.setdefault("chunk_type", "content")
     normalized.setdefault("metadata", {})
-    normalized["metadata"] = {**normalized["metadata"], "paper_id": normalized["paper_id"]}
+    normalized["metadata"] = {
+        **normalized["metadata"],
+        "source": normalized["source"],
+        "filename": normalized["filename"],
+        "paper_id": normalized["paper_id"],
+        "document_id": normalized["document_id"],
+        "page": normalized["page"],
+        "page_number": normalized["page_number"],
+        "section": normalized["section"],
+        "chunk_id": normalized["chunk_id"],
+    }
     return normalized
-

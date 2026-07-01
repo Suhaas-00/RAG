@@ -1,7 +1,291 @@
 {
+  "18509184.pdf": {
+    "source": "18509184.pdf",
+    "filename": "18509184.pdf",
+    "paper_id": "paper 1",
+    "document_id": "paper 1",
+    "doi": "10.1200/JCO.2007.15.6695",
+    "pmid": null,
+    "year": "2008",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "prospective"
+    ]
+  },
+  "18509184": {
+    "source": "18509184.pdf",
+    "filename": "18509184.pdf",
+    "paper_id": "paper 1",
+    "document_id": "paper 1",
+    "doi": "10.1200/JCO.2007.15.6695",
+    "pmid": null,
+    "year": "2008",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "prospective"
+    ]
+  },
+  "paper 1": {
+    "source": "18509184.pdf",
+    "filename": "18509184.pdf",
+    "paper_id": "paper 1",
+    "document_id": "paper 1",
+    "doi": "10.1200/JCO.2007.15.6695",
+    "pmid": null,
+    "year": "2008",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "prospective"
+    ]
+  },
+  "22285168.pdf": {
+    "source": "22285168.pdf",
+    "filename": "22285168.pdf",
+    "paper_id": "paper 2",
+    "document_id": "paper 2",
+    "doi": "10.1016/S1470-2045(11",
+    "pmid": "22285167",
+    "year": "2012",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
+  "22285168": {
+    "source": "22285168.pdf",
+    "filename": "22285168.pdf",
+    "paper_id": "paper 2",
+    "document_id": "paper 2",
+    "doi": "10.1016/S1470-2045(11",
+    "pmid": "22285167",
+    "year": "2012",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
+  "paper 2": {
+    "source": "22285168.pdf",
+    "filename": "22285168.pdf",
+    "paper_id": "paper 2",
+    "document_id": "paper 2",
+    "doi": "10.1016/S1470-2045(11",
+    "pmid": "22285167",
+    "year": "2012",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "L858R",
+      "MET"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
+  "23816960.pdf": {
+    "source": "23816960.pdf",
+    "filename": "23816960.pdf",
+    "paper_id": "paper 3",
+    "document_id": "paper 3",
+    "doi": "10.1200/JCO.2012.44.2806",
+    "pmid": "37235976",
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "HER2",
+      "L858R"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "phase iii"
+    ]
+  },
+  "23816960": {
+    "source": "23816960.pdf",
+    "filename": "23816960.pdf",
+    "paper_id": "paper 3",
+    "document_id": "paper 3",
+    "doi": "10.1200/JCO.2012.44.2806",
+    "pmid": "37235976",
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "HER2",
+      "L858R"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "phase iii"
+    ]
+  },
+  "paper 3": {
+    "source": "23816960.pdf",
+    "filename": "23816960.pdf",
+    "paper_id": "paper 3",
+    "document_id": "paper 3",
+    "doi": "10.1200/JCO.2012.44.2806",
+    "pmid": "37235976",
+    "year": "2013",
+    "diseases": [
+      "adenocarcinoma",
+      "cancer"
+    ],
+    "genes": [
+      "EGFR",
+      "ERBB2",
+      "HER2",
+      "L858R"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "phase ii",
+      "phase iii"
+    ]
+  },
+  "24439929.pdf": {
+    "source": "24439929.pdf",
+    "filename": "24439929.pdf",
+    "paper_id": "paper 4",
+    "document_id": "paper 4",
+    "doi": "10.1016/S1470-2045(13",
+    "pmid": "24439930",
+    "year": "2014",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
+  "24439929": {
+    "source": "24439929.pdf",
+    "filename": "24439929.pdf",
+    "paper_id": "paper 4",
+    "document_id": "paper 4",
+    "doi": "10.1016/S1470-2045(13",
+    "pmid": "24439930",
+    "year": "2014",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
+  "paper 4": {
+    "source": "24439929.pdf",
+    "filename": "24439929.pdf",
+    "paper_id": "paper 4",
+    "document_id": "paper 4",
+    "doi": "10.1016/S1470-2045(13",
+    "pmid": "24439930",
+    "year": "2014",
+    "diseases": [
+      "cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR"
+    ],
+    "study_designs": [
+      "clinical trial",
+      "open-label",
+      "phase 3",
+      "randomised"
+    ]
+  },
   "24868098.pdf": {
     "source": "24868098.pdf",
-    "paper_id": "paper 1",
+    "filename": "24868098.pdf",
+    "paper_id": "paper 5",
+    "document_id": "paper 5",
     "doi": "10.1634/theoncologist.2014-0089",
     "pmid": null,
     "year": "2013",
@@ -29,7 +313,9 @@
   },
   "24868098": {
     "source": "24868098.pdf",
-    "paper_id": "paper 1",
+    "filename": "24868098.pdf",
+    "paper_id": "paper 5",
+    "document_id": "paper 5",
     "doi": "10.1634/theoncologist.2014-0089",
     "pmid": null,
     "year": "2013",
@@ -55,9 +341,11 @@
       "retrospective"
     ]
   },
-  "paper 1": {
+  "paper 5": {
     "source": "24868098.pdf",
-    "paper_id": "paper 1",
+    "filename": "24868098.pdf",
+    "paper_id": "paper 5",
+    "document_id": "paper 5",
     "doi": "10.1634/theoncologist.2014-0089",
     "pmid": null,
     "year": "2013",
@@ -85,7 +373,9 @@
   },
   "25923550.pdf": {
     "source": "25923550.pdf",
-    "paper_id": "paper 2",
+    "filename": "25923550.pdf",
+    "paper_id": "paper 6",
+    "document_id": "paper 6",
     "doi": "10.1056/NEJMoa1413654",
     "pmid": null,
     "year": "2015",
@@ -118,7 +408,9 @@
   },
   "25923550": {
     "source": "25923550.pdf",
-    "paper_id": "paper 2",
+    "filename": "25923550.pdf",
+    "paper_id": "paper 6",
+    "document_id": "paper 6",
     "doi": "10.1056/NEJMoa1413654",
     "pmid": null,
     "year": "2015",
@@ -149,9 +441,11 @@
       "randomized"
     ]
   },
-  "paper 2": {
+  "paper 6": {
     "source": "25923550.pdf",
-    "paper_id": "paper 2",
+    "filename": "25923550.pdf",
+    "paper_id": "paper 6",
+    "document_id": "paper 6",
     "doi": "10.1056/NEJMoa1413654",
     "pmid": null,
     "year": "2015",
@@ -184,7 +478,9 @@
   },
   "25939061.pdf": {
     "source": "25939061.pdf",
-    "paper_id": "paper 3",
+    "filename": "25939061.pdf",
+    "paper_id": "paper 7",
+    "document_id": "paper 7",
     "doi": "10.1038/nm.3854",
     "pmid": null,
     "year": "2016",
@@ -210,7 +506,9 @@
   },
   "25939061": {
     "source": "25939061.pdf",
-    "paper_id": "paper 3",
+    "filename": "25939061.pdf",
+    "paper_id": "paper 7",
+    "document_id": "paper 7",
     "doi": "10.1038/nm.3854",
     "pmid": null,
     "year": "2016",
@@ -234,9 +532,11 @@
       "phase i"
     ]
   },
-  "paper 3": {
+  "paper 7": {
     "source": "25939061.pdf",
-    "paper_id": "paper 3",
+    "filename": "25939061.pdf",
+    "paper_id": "paper 7",
+    "document_id": "paper 7",
     "doi": "10.1038/nm.3854",
     "pmid": null,
     "year": "2016",
@@ -258,11 +558,76 @@
       "clinical trial",
       "cohort",
       "phase i"
+    ]
+  },
+  "26729184.pdf": {
+    "source": "26729184.pdf",
+    "filename": "26729184.pdf",
+    "paper_id": "paper 8",
+    "document_id": "paper 8",
+    "doi": "10.1007/s40265-015-0533-4",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "T790M"
+    ],
+    "study_designs": [
+      "phase i",
+      "phase iii"
+    ]
+  },
+  "26729184": {
+    "source": "26729184.pdf",
+    "filename": "26729184.pdf",
+    "paper_id": "paper 8",
+    "document_id": "paper 8",
+    "doi": "10.1007/s40265-015-0533-4",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "T790M"
+    ],
+    "study_designs": [
+      "phase i",
+      "phase iii"
+    ]
+  },
+  "paper 8": {
+    "source": "26729184.pdf",
+    "filename": "26729184.pdf",
+    "paper_id": "paper 8",
+    "document_id": "paper 8",
+    "doi": "10.1007/s40265-015-0533-4",
+    "pmid": null,
+    "year": "2016",
+    "diseases": [
+      "non-small cell lung cancer",
+      "nsclc"
+    ],
+    "genes": [
+      "EGFR",
+      "T790M"
+    ],
+    "study_designs": [
+      "phase i",
+      "phase iii"
     ]
   },
   "27022036.pdf": {
     "source": "27022036.pdf",
-    "paper_id": "paper 4",
+    "filename": "27022036.pdf",
+    "paper_id": "paper 9",
+    "document_id": "paper 9",
     "doi": null,
     "pmid": null,
     "year": "2009",
@@ -293,7 +658,9 @@
   },
   "27022036": {
     "source": "27022036.pdf",
-    "paper_id": "paper 4",
+    "filename": "27022036.pdf",
+    "paper_id": "paper 9",
+    "document_id": "paper 9",
     "doi": null,
     "pmid": null,
     "year": "2009",
@@ -322,9 +689,11 @@
       "phase i"
     ]
   },
-  "paper 4": {
+  "paper 9": {
     "source": "27022036.pdf",
-    "paper_id": "paper 4",
+    "filename": "27022036.pdf",
+    "paper_id": "paper 9",
+    "document_id": "paper 9",
     "doi": null,
     "pmid": null,
     "year": "2009",
@@ -355,7 +724,9 @@
   },
   "27343442.pdf": {
     "source": "27343442.pdf",
-    "paper_id": "paper 5",
+    "filename": "27343442.pdf",
+    "paper_id": "paper 10",
+    "document_id": "paper 10",
     "doi": "10.1016/j.jtho.2016.06.013",
     "pmid": null,
     "year": "2016",
@@ -381,7 +752,9 @@
   },
   "27343442": {
     "source": "27343442.pdf",
-    "paper_id": "paper 5",
+    "filename": "27343442.pdf",
+    "paper_id": "paper 10",
+    "document_id": "paper 10",
     "doi": "10.1016/j.jtho.2016.06.013",
     "pmid": null,
     "year": "2016",
@@ -405,9 +778,11 @@
       "clinical trial"
     ]
   },
-  "paper 5": {
+  "paper 10": {
     "source": "27343442.pdf",
-    "paper_id": "paper 5",
+    "filename": "27343442.pdf",
+    "paper_id": "paper 10",
+    "document_id": "paper 10",
     "doi": "10.1016/j.jtho.2016.06.013",
     "pmid": null,
     "year": "2016",
@@ -433,7 +808,9 @@
   },
   "27694386.pdf": {
     "source": "27694386.pdf",
-    "paper_id": "paper 6",
+    "filename": "27694386.pdf",
+    "paper_id": "paper 11",
+    "document_id": "paper 11",
     "doi": "10.1158/2159-8290.CD-16-0686",
     "pmid": null,
     "year": "2017",
@@ -470,7 +847,9 @@
   },
   "27694386": {
     "source": "27694386.pdf",
-    "paper_id": "paper 6",
+    "filename": "27694386.pdf",
+    "paper_id": "paper 11",
+    "document_id": "paper 11",
     "doi": "10.1158/2159-8290.CD-16-0686",
     "pmid": null,
     "year": "2017",
@@ -505,9 +884,11 @@
       "randomized"
     ]
   },
-  "paper 6": {
+  "paper 11": {
     "source": "27694386.pdf",
-    "paper_id": "paper 6",
+    "filename": "27694386.pdf",
+    "paper_id": "paper 11",
+    "document_id": "paper 11",
     "doi": "10.1158/2159-8290.CD-16-0686",
     "pmid": null,
     "year": "2017",
@@ -544,7 +925,9 @@
   },
   "31254668.pdf": {
     "source": "31254668.pdf",
-    "paper_id": "paper 7",
+    "filename": "31254668.pdf",
+    "paper_id": "paper 12",
+    "document_id": "paper 12",
     "doi": "10.1016/j.jtho.2019.06.015",
     "pmid": null,
     "year": "2021",
@@ -570,7 +953,9 @@
   },
   "31254668": {
     "source": "31254668.pdf",
-    "paper_id": "paper 7",
+    "filename": "31254668.pdf",
+    "paper_id": "paper 12",
+    "document_id": "paper 12",
     "doi": "10.1016/j.jtho.2019.06.015",
     "pmid": null,
     "year": "2021",
@@ -594,9 +979,11 @@
       "phase ii"
     ]
   },
-  "paper 7": {
+  "paper 12": {
     "source": "31254668.pdf",
-    "paper_id": "paper 7",
+    "filename": "31254668.pdf",
+    "paper_id": "paper 12",
+    "document_id": "paper 12",
     "doi": "10.1016/j.jtho.2019.06.015",
     "pmid": null,
     "year": "2021",
@@ -622,7 +1009,9 @@
   },
   "31416808.pdf": {
     "source": "31416808.pdf",
-    "paper_id": "paper 8",
+    "filename": "31416808.pdf",
+    "paper_id": "paper 13",
+    "document_id": "paper 13",
     "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
     "pmid": null,
     "year": "2026",
@@ -655,7 +1044,9 @@
   },
   "31416808": {
     "source": "31416808.pdf",
-    "paper_id": "paper 8",
+    "filename": "31416808.pdf",
+    "paper_id": "paper 13",
+    "document_id": "paper 13",
     "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
     "pmid": null,
     "year": "2026",
@@ -686,9 +1077,11 @@
       "retrospective"
     ]
   },
-  "paper 8": {
+  "paper 13": {
     "source": "31416808.pdf",
-    "paper_id": "paper 8",
+    "filename": "31416808.pdf",
+    "paper_id": "paper 13",
+    "document_id": "paper 13",
     "doi": "10.1158/1078-0432.CCR-19-0994/2121863/1078-0432_ccr-19-0994v3.pdf",
     "pmid": null,
     "year": "2026",
@@ -721,7 +1114,9 @@
   },
   "31825714.pdf": {
     "source": "31825714.pdf",
-    "paper_id": "paper 9",
+    "filename": "31825714.pdf",
+    "paper_id": "paper 14",
+    "document_id": "paper 14",
     "doi": "10.1200/JCO.19",
     "pmid": null,
     "year": "2016",
@@ -753,7 +1148,9 @@
   },
   "31825714": {
     "source": "31825714.pdf",
-    "paper_id": "paper 9",
+    "filename": "31825714.pdf",
+    "paper_id": "paper 14",
+    "document_id": "paper 14",
     "doi": "10.1200/JCO.19",
     "pmid": null,
     "year": "2016",
@@ -783,9 +1180,11 @@
       "retrospective"
     ]
   },
-  "paper 9": {
+  "paper 14": {
     "source": "31825714.pdf",
-    "paper_id": "paper 9",
+    "filename": "31825714.pdf",
+    "paper_id": "paper 14",
+    "document_id": "paper 14",
     "doi": "10.1200/JCO.19",
     "pmid": null,
     "year": "2016",
@@ -817,7 +1216,9 @@
   },
   "32469185.pdf": {
     "source": "32469185.pdf",
-    "paper_id": "paper 10",
+    "filename": "32469185.pdf",
+    "paper_id": "paper 15",
+    "document_id": "paper 15",
     "doi": "10.1056/NEJMoa2004407",
     "pmid": null,
     "year": "2021",
@@ -849,7 +1250,9 @@
   },
   "32469185": {
     "source": "32469185.pdf",
-    "paper_id": "paper 10",
+    "filename": "32469185.pdf",
+    "paper_id": "paper 15",
+    "document_id": "paper 15",
     "doi": "10.1056/NEJMoa2004407",
     "pmid": null,
     "year": "2021",
@@ -879,9 +1282,11 @@
       "retrospective"
     ]
   },
-  "paper 10": {
+  "paper 15": {
     "source": "32469185.pdf",
-    "paper_id": "paper 10",
+    "filename": "32469185.pdf",
+    "paper_id": "paper 15",
+    "document_id": "paper 15",
     "doi": "10.1056/NEJMoa2004407",
     "pmid": null,
     "year": "2021",
@@ -913,7 +1318,9 @@
   },
   "32969527.pdf": {
     "source": "32969527.pdf",
-    "paper_id": "paper 11",
+    "filename": "32969527.pdf",
+    "paper_id": "paper 16",
+    "document_id": "paper 16",
     "doi": "10.1002/onco.13537",
     "pmid": null,
     "year": "2021",
@@ -949,7 +1356,9 @@
   },
   "32969527": {
     "source": "32969527.pdf",
-    "paper_id": "paper 11",
+    "filename": "32969527.pdf",
+    "paper_id": "paper 16",
+    "document_id": "paper 16",
     "doi": "10.1002/onco.13537",
     "pmid": null,
     "year": "2021",
@@ -983,9 +1392,11 @@
       "retrospective"
     ]
   },
-  "paper 11": {
+  "paper 16": {
     "source": "32969527.pdf",
-    "paper_id": "paper 11",
+    "filename": "32969527.pdf",
+    "paper_id": "paper 16",
+    "document_id": "paper 16",
     "doi": "10.1002/onco.13537",
     "pmid": null,
     "year": "2021",

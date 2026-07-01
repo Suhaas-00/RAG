@@ -15,7 +15,6 @@ extract_metadata_from_text(text)   – Heuristic metadata extraction from raw PD
 """
 
 from __future__ import annotations
-
 import re
 import unicodedata
 from typing import Optional
@@ -158,23 +157,16 @@ def clean_text(text: Optional[str], *, lowercase: bool = False) -> str:
 # Embedding normalisation (shared contract between ingestion and retrieval)
 # ---------------------------------------------------------------------------
 
+ 
+_PUNCT_RE = re.compile(r"[^\w\s]")
+_WS_RE = re.compile(r"\s+")
 
-def normalize_for_embedding(text: Optional[str]) -> str:
-    """Canonical preprocessing applied identically at ingestion and query time.
-
-    This is the **single source of truth** for how text is prepared before
-    it is encoded by the embedding model.  Any change here requires a full
-    index rebuild.
-
-    Parameters
-    ----------
-    text: Raw text string.
-
-    Returns
-    -------
-    Cleaned, lower-cased string ready for :class:`PubMedEmbedder`.
-    """
-    return clean_text(text, lowercase=True)
+def normalize_for_embedding(text: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace."""
+    text = (text or "").lower()
+    text = _PUNCT_RE.sub(" ", text)
+    text = _WS_RE.sub(" ", text).strip()
+    return text
 
 
 # ---------------------------------------------------------------------------

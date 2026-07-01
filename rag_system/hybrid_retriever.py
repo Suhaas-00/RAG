@@ -14,7 +14,9 @@ import numpy as np
 
 from rag_system.ingestion.embedding import PubMedEmbedder
 from rag_system.query_parser import QueryIntent
+from rag_system.retrieval.document_scope import filter_record_indices, has_document_scope
 from rag_system.reranker import CrossEncoderReranker
+from rag_system.utils.config import Settings
 from rag_system.utils.preprocessing import normalize_for_embedding
 
 logger = logging.getLogger(__name__)
@@ -28,11 +30,22 @@ class RetrievalResult:
 
 
 class HybridRetriever:
-    def __init__(self, index: faiss.Index, payload: dict, embedder: PubMedEmbedder, *, alpha: float = 0.55) -> None:
+    def __init__(
+        self,
+        index: faiss.Index,
+        payload: dict,
+        embedder: PubMedEmbedder,
+        *,
+        alpha: float = 0.55,
+        enable_document_filtering: bool = True,
+        allow_global_search: bool = False,
+    ) -> None:
         self.index = index
         self.payload = payload
         self.embedder = embedder
         self.alpha = alpha
+        self.enable_document_filtering = enable_document_filtering
+        self.allow_global_search = allow_global_search
         self.records: list[dict] = payload["records"]
         self.tfidf = payload.get("tfidf_vectorizer")
         self.tfidf_matrix = payload.get("tfidf_matrix")
@@ -40,7 +53,15 @@ class HybridRetriever:
         self.reranker = CrossEncoderReranker()
 
     @classmethod
-    def load(cls, index_dir: str | Path, *, alpha: float = 0.55) -> "HybridRetriever":
+    def load(
+        cls,
+        index_dir: str | Path,
+        *,
+        alpha: float = 0.55,
+        enable_document_filtering: bool | None = None,
+        allow_global_search: bool | None = None,
+    ) -> "HybridRetriever":
+        settings = Settings()
         index_dir = Path(index_dir)
         index_path = index_dir / "vectors.index"
         metadata_path = index_dir / "metadata.pkl"
@@ -53,20 +74,59 @@ class HybridRetriever:
         with metadata_path.open("rb") as handle:
             payload = pickle.load(handle)  # noqa: S301
         embedder = PubMedEmbedder(payload.get("model_name", "NeuML/pubmedbert-base-embeddings"), use_prefixes=True)
-        return cls(index, payload, embedder, alpha=alpha)
+        return cls(
+            index,
+            payload,
+            embedder,
+            alpha=alpha,
+            enable_document_filtering=(
+                settings.enable_document_filtering
+                if enable_document_filtering is None else enable_document_filtering
+            ),
+            allow_global_search=(
+                settings.allow_global_search or settings.default_filter_mode == "global"
+                if allow_global_search is None else allow_global_search
+            ),
+        )
 
-    def retrieve(self, query: str, intent: QueryIntent | None = None, *, top_k: int = 5, candidate_k: int = 40, alpha: float | None = None, **legacy_filters) -> RetrievalResult:
+    def retrieve(
+        self,
+        query: str,
+        intent: QueryIntent | None = None,
+        *,
+        top_k: int = 5,
+        candidate_k: int = 40,
+        alpha: float | None = None,
+        allow_global_search: bool | None = None,
+        **legacy_filters,
+    ) -> RetrievalResult:
         alpha = self.alpha if alpha is None else alpha
         filters = dict(getattr(intent, "filters", {}) or {})
         if legacy_filters.get("source_filter"):
             filters["source"] = legacy_filters["source_filter"]
+        if legacy_filters.get("source_filters"):
+            filters["sources"] = legacy_filters["source_filters"]
+        if legacy_filters.get("paper_id_filter"):
+            filters["paper_id"] = legacy_filters["paper_id_filter"]
+        if legacy_filters.get("paper_ids"):
+            filters["paper_ids"] = legacy_filters["paper_ids"]
+        if legacy_filters.get("document_id_filter"):
+            filters["document_id"] = legacy_filters["document_id_filter"]
+        if legacy_filters.get("document_ids"):
+            filters["document_ids"] = legacy_filters["document_ids"]
         if legacy_filters.get("section_filter"):
             filters["section"] = legacy_filters["section_filter"]
         if legacy_filters.get("chunk_type_filter"):
             filters["chunk_type"] = legacy_filters["chunk_type_filter"]
 
-        candidate_indices = self._metadata_filter(filters)
-        debug = {"filters": filters, "candidate_count": len(candidate_indices)}
+        scoped_global = self.allow_global_search if allow_global_search is None else allow_global_search
+        candidate_indices = self._metadata_filter(filters, allow_global_search=scoped_global)
+        debug = {
+            "filters": filters,
+            "document_scoped": has_document_scope(filters),
+            "allow_global_search": scoped_global,
+            "candidate_count": len(candidate_indices),
+        }
         if not candidate_indices:
             return RetrievalResult("", [], debug)
 
@@ -108,19 +168,14 @@ class HybridRetriever:
         ]
         return RetrievalResult(format_context(reranked), reranked, debug)
 
-    def _metadata_filter(self, filters: dict[str, str]) -> list[int]:
-        result: list[int] = []
-        for idx, rec in enumerate(self.records):
-            if filters.get("source") and Path(str(rec.get("source", ""))).name.casefold() != Path(filters["source"]).name.casefold():
-                continue
-            if filters.get("paper_id") and str(rec.get("paper_id", "")).casefold() != filters["paper_id"].casefold():
-                continue
-            if filters.get("section") and str(rec.get("section", "")).casefold() != filters["section"].casefold():
-                continue
-            if filters.get("chunk_type") and str(rec.get("chunk_type", "content")) != filters["chunk_type"]:
-                continue
-            result.append(idx)
-        return result
+    def _metadata_filter(self, filters: dict[str, object], *, allow_global_search: bool | None = None) -> list[int]:
+        return filter_record_indices(
+            self.records,
+            filters,
+            enable_document_filtering=self.enable_document_filtering,
+            allow_global_search=self.allow_global_search if allow_global_search is None else allow_global_search,
+            require_document_scope=True,
+        )
 
     def _dense_scores(self, query: str, candidate_indices: list[int], candidate_k: int) -> dict[int, float]:
         query_vec = self.embedder.encode_query(query).astype("float32")
