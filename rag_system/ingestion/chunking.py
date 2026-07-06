@@ -220,7 +220,7 @@ def _units_to_chunks(
     ``next_chunk_id`` – ``None`` until :func:`wire_neighbors` is called.
     ``ordinal``       – sequential index within this source (before filtering).
     ``token_count``   – number of tokens in *text*.
-    ``metadata``      – empty dict placeholder (populated during ingestion).
+    ``metadata``      – initially empty dict populated during ingestion.
     """
     chunks: list[dict] = []
     n = len(units)

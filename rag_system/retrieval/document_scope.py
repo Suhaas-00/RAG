@@ -1,4 +1,20 @@
-"""Document-scope metadata filtering shared by all retrieval paths."""
+"""Document-scope metadata filtering shared by all retrieval paths.
+
+Behavior summary
+-----------------
+* Document-scope filtering is controlled by
+  :mod:`rag_system.retrieval.retrieval_config` and is disabled by default.
+* When document scope is enabled and a caller supplies a document identifier
+  (``source``, ``paper_id``, ``document_id``, etc.), retrieval is scoped
+  strictly to matching document(s) -- other documents are excluded even if
+  they'd otherwise be relevant.
+* If no document identifier is supplied, retrieval defaults to searching
+  the **entire corpus** rather than returning nothing. A user who hasn't
+  named a specific paper should still get an answer.
+* This can be overridden in either direction via ``allow_global_search`` /
+  ``require_document_scope`` on :func:`filter_record_indices` -- see that
+  function's docstring for the exact decision table.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +22,8 @@ import logging
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
+
+from rag_system.retrieval.retrieval_config import document_scope_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +33,7 @@ DOCUMENT_FILTER_KEYS: tuple[str, ...] = DOCUMENT_ID_KEYS + SOURCE_KEYS
 
 
 def _as_values(value: Any) -> list[str]:
+    """Normalize a filter value (scalar, string, or iterable) to a list of strings."""
     if value is None:
         return []
     if isinstance(value, str):
@@ -25,6 +44,7 @@ def _as_values(value: Any) -> list[str]:
 
 
 def _record_value(record: dict[str, Any], key: str) -> str | None:
+    """Look up *key* on a record, falling back to a nested ``metadata`` dict."""
     value = record.get(key)
     if value is None and isinstance(record.get("metadata"), dict):
         value = record["metadata"].get(key)
@@ -34,13 +54,17 @@ def _record_value(record: dict[str, Any], key: str) -> str | None:
 
 
 def _same_identifier(actual: str | None, wanted: str) -> bool:
+    """Case-insensitive identifier match, tolerant of path vs. filename vs. stem."""
     if not actual:
         return False
     actual_fold = actual.casefold()
     wanted_fold = wanted.casefold()
     if actual_fold == wanted_fold:
         return True
-    return Path(actual_fold).name == Path(wanted_fold).name or Path(actual_fold).stem == Path(wanted_fold).stem
+    return (
+        Path(actual_fold).name == Path(wanted_fold).name
+        or Path(actual_fold).stem == Path(wanted_fold).stem
+    )
 
 
 def document_filter_values(filters: dict[str, Any]) -> dict[str, list[str]]:
@@ -88,7 +112,7 @@ def document_matches(record: dict[str, Any], filters: dict[str, Any]) -> bool:
 
 
 def metadata_matches(record: dict[str, Any], filters: dict[str, Any]) -> bool:
-    """Apply non-document metadata filters after document scope is checked."""
+    """Apply non-document metadata filters (section, chunk type, disease, gene, year)."""
     section = filters.get("section") or filters.get("section_filter")
     if section and str(record.get("section", "")).casefold() != str(section).casefold():
         return False
@@ -122,33 +146,86 @@ def filter_record_indices(
     records: list[dict[str, Any]],
     filters: dict[str, Any] | None = None,
     *,
-    enable_document_filtering: bool = True,
-    allow_global_search: bool = False,
+    enable_document_filtering: bool | None = None,
+    allow_global_search: bool = True,
     require_document_scope: bool = True,
     drop_noisy: bool = False,
     noisy_predicate: Any | None = None,
 ) -> list[int]:
-    """Return record indices that satisfy document and metadata filters."""
+    """Return indices of records satisfying document and metadata filters.
+
+    Decision table
+    ---------------
+    1. ``enable_document_filtering=False``
+       -> document-identity filtering is skipped entirely; metadata filters
+          like section/year/gene/chunk_type still apply.
+
+    2. A document identifier is supplied (``source`` / ``paper_id`` /
+       ``document_id`` / ...)
+       -> strictly scoped: only records matching that document pass,
+          regardless of ``allow_global_search``. This never silently
+          expands to the whole corpus, even if the identifier matches
+          nothing -- callers that want a fallback should retry explicitly
+          without the identifier.
+
+    3. No document identifier is supplied
+       -> ``allow_global_search=True`` (the default): search the entire
+          corpus. This is the common case for open-ended questions where
+          the user hasn't named a specific paper.
+       -> ``allow_global_search=False`` *and* ``require_document_scope=True``:
+          return ``[]`` and log a debug message. Use this combination only when
+          you deliberately want to refuse to answer without an explicit
+          document scope.
+       -> ``allow_global_search=False`` and ``require_document_scope=False``:
+          search the entire corpus anyway (kept for backward compatibility
+          with callers that manage the guard themselves).
+
+    Metadata filters (section/year/gene/etc.) are always applied on top of
+    whatever document-identity decision is made above.
+    """
     filters = filters or {}
     scoped = has_document_scope(filters)
+    effective_enabled = document_scope_enabled(enable_document_filtering)
 
-    if enable_document_filtering and require_document_scope and not scoped and not allow_global_search:
-        logger.warning(
-            "Document-scope filtering is enabled but no document identifier was supplied; "
-            "returning no candidates. Pass allow_global_search=True for explicit global retrieval."
+    # ------------------------------------------------------------
+    # Decide whether document-identity filtering should be applied
+    # ------------------------------------------------------------
+    if not effective_enabled:
+        apply_document_filter = False
+    elif scoped:
+        logger.debug("Document-scoped retrieval selected for filters: %s", document_filter_values(filters))
+        apply_document_filter = True
+    elif allow_global_search:
+        logger.debug("Global retrieval selected (no document scope).")
+        apply_document_filter = False
+    elif require_document_scope:
+        logger.debug(
+            "Document-scope filtering is enabled but no document identifier "
+            "was supplied, and allow_global_search=False was set explicitly; "
+            "returning no candidates."
         )
         return []
+    else:
+        apply_document_filter = False
 
+    # ------------------------------------------------------------
+    # Filter records
+    # ------------------------------------------------------------
     indices: list[int] = []
     for idx, record in enumerate(records):
         if drop_noisy and noisy_predicate is not None and noisy_predicate(record.get("text", "")):
             continue
-        if enable_document_filtering and scoped and not document_matches(record, filters):
+        if apply_document_filter and not document_matches(record, filters):
             continue
         if not metadata_matches(record, filters):
             continue
         indices.append(idx)
 
-    if enable_document_filtering and scoped and not indices:
-        logger.info("No records matched document-scope filters: %s", document_filter_values(filters))
+    if apply_document_filter and not indices:
+        logger.info("No records matched document filters: %s", document_filter_values(filters))
+
+    logger.debug(
+        "Document scope: enabled=%s, scoped=%s, apply_document_filter=%s, allow_global_search=%s, returned=%d",
+        effective_enabled, scoped, apply_document_filter, allow_global_search, len(indices),
+    )
     return indices

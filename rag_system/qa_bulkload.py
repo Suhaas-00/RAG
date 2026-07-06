@@ -19,9 +19,12 @@ from __future__ import annotations
 import logging
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
+
+from rag_system.logging_config import configure_logging
+from rag_system.utils.config import Settings
 
 # ---------------------------------------------------------------------------
 # Configuration – edit these values as needed
@@ -32,17 +35,13 @@ OUTPUT_EXCEL: str   = "outputs/reports/rag_results.xlsx"   # Path for the output
 MODEL:        str   = "llama-3.1-8b-instant"  # Groq model identifier
 TOP_K:        int   = 5                       # Number of chunks to retrieve per question
 ALPHA:        float = 0.55                    # Hybrid retrieval weight (dense vs sparse)
-ALLOW_GLOBAL_SEARCH: bool = False             # Explicitly allow unscoped corpus-wide retrieval
+ALLOW_GLOBAL_SEARCH: Optional[bool] = None    # None = auto; True = allow scoped global fallback
 
 # ---------------------------------------------------------------------------
 # Logging setup
 # ---------------------------------------------------------------------------
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+configure_logging(Settings.from_env().log_level, json_logs=Settings.from_env().json_logs)
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -267,7 +266,7 @@ def process_question(
     top_k: int = TOP_K,
     model: str = MODEL,
     alpha: float = ALPHA,
-    allow_global_search: bool = ALLOW_GLOBAL_SEARCH,
+    allow_global_search: Optional[bool] = ALLOW_GLOBAL_SEARCH,
 ) -> list[dict[str, Any]]:
     """
     Run retrieval and LLM generation for one question.
@@ -353,7 +352,7 @@ def run_bulk_inference(
     model:        str   = MODEL,
     top_k:        int   = TOP_K,
     alpha:        float = ALPHA,
-    allow_global_search: bool = ALLOW_GLOBAL_SEARCH,
+    allow_global_search: Optional[bool] = ALLOW_GLOBAL_SEARCH,
 ) -> None:
     """
     Main entry-point: load index once, iterate over questions, write output.
@@ -374,9 +373,8 @@ def run_bulk_inference(
     # Exact imports taken from qa_cli.py – nothing guessed
     from rag_system.hybrid_retriever import HybridRetriever
     from rag_system.llm import load_groq_api_key
-    from rag_system.utils.config import Settings          # qa_cli.py line: from rag_system.utils.config import Settings
-
     # -----------------------------------------------------------------------
+    settings = Settings.from_env()
     start_time = time.perf_counter()
     logger.info("=== Medical RAG - Bulk Inference ===")
     logger.info(
@@ -393,12 +391,12 @@ def run_bulk_inference(
     logger.info("Questions to process: %d", total)
 
     # Load the RAG index ONCE and reuse for every question
-    index_dir = str(Settings().index_dir)
+    index_dir = str(settings.index_dir)
     logger.info("Loading index from: %s", index_dir)
     retriever: Any = HybridRetriever.load(
         index_dir,
         alpha=alpha,
-        allow_global_search=allow_global_search,
+        allow_global_search=bool(allow_global_search),
     )
     logger.info("Index loaded successfully.")
 

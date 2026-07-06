@@ -28,7 +28,7 @@ Environment variables (optional overrides)
 ``RAG_TOP_K``               – Final number of chunks returned to the caller.
 ``RAG_MAX_CONTEXT_TOKENS``  – Token budget for the LLM context window.
 ``RAG_MIN_CHUNK_TOKENS``    – Minimum tokens required to keep a chunk.
-``RAG_ENABLE_DOCUMENT_FILTERING`` – Enable strict document-scope retrieval.
+``RAG_ENABLE_DOCUMENT_SCOPE``     – Enable strict document-scope retrieval.
 ``RAG_DEFAULT_FILTER_MODE``       – ``document`` or ``global``.
 ``RAG_ALLOW_GLOBAL_SEARCH``       – Permit unscoped global retrieval.
 """
@@ -40,6 +40,8 @@ import os
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any
+
+from rag_system.retrieval.retrieval_config import ENABLE_DOCUMENT_SCOPE
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +123,17 @@ class Settings:
     min_chunk_tokens: int = 40
     enable_document_filtering: bool = True
     default_filter_mode: str = "document"
-    allow_global_search: bool = False
+    allow_global_search: bool = True
+    retrieval_alpha: float = 0.55
+    enable_cache: bool = True
+    cache_max_size: int = 512
+    retrieval_cache_ttl_seconds: int = 300
+    
+    response_cache_ttl_seconds: int = 300
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+    log_level: str = "INFO"
+    json_logs: bool = False
 
     # ------------------------------------------------------------------
     # Derived properties
@@ -185,6 +197,26 @@ class Settings:
             raise ValueError(
                 f"embedding_batch_size must be ≥ 1, got {self.embedding_batch_size}"
             )
+        if not (0.0 <= self.retrieval_alpha <= 1.0):
+            raise ValueError(
+                f"retrieval_alpha must be in [0.0, 1.0], got {self.retrieval_alpha}"
+            )
+        if self.cache_max_size < 1:
+            raise ValueError(f"cache_max_size must be ≥ 1, got {self.cache_max_size}")
+        if self.retrieval_cache_ttl_seconds < 1:
+            raise ValueError(
+                "retrieval_cache_ttl_seconds must be ≥ 1, "
+                f"got {self.retrieval_cache_ttl_seconds}"
+            )
+        if self.response_cache_ttl_seconds < 1:
+            raise ValueError(
+                "response_cache_ttl_seconds must be ≥ 1, "
+                f"got {self.response_cache_ttl_seconds}"
+            )
+        if not (1 <= self.api_port <= 65535):
+            raise ValueError(f"api_port must be in [1, 65535], got {self.api_port}")
+        if self.log_level.upper() not in {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}:
+            raise ValueError(f"Unsupported log_level: {self.log_level!r}")
         if self.default_filter_mode not in {"document", "global"}:
             raise ValueError(
                 "default_filter_mode must be either 'document' or 'global', "
@@ -222,10 +254,21 @@ class Settings:
             top_k=int(_env("TOP_K", "3")),
             max_context_tokens=int(_env("MAX_CONTEXT_TOKENS", "2000")),
             min_chunk_tokens=int(_env("MIN_CHUNK_TOKENS", "40")),
-            enable_document_filtering=_env("ENABLE_DOCUMENT_FILTERING", "true").lower()
+            enable_document_filtering=_env("ENABLE_DOCUMENT_SCOPE", str(ENABLE_DOCUMENT_SCOPE)).lower()
             in {"1", "true", "yes", "on"},
-            default_filter_mode=_env("DEFAULT_FILTER_MODE", "document").lower(),
-            allow_global_search=_env("ALLOW_GLOBAL_SEARCH", "false").lower()
+            default_filter_mode=_env("DEFAULT_FILTER_MODE", "global").lower(),
+            allow_global_search=_env("ALLOW_GLOBAL_SEARCH", "true").lower()
+            in {"1", "true", "yes", "on"},
+            retrieval_alpha=float(_env("RETRIEVAL_ALPHA", "0.55")),
+            enable_cache=_env("ENABLE_CACHE", "true").lower()
+            in {"1", "true", "yes", "on"},
+            cache_max_size=int(_env("CACHE_MAX_SIZE", "512")),
+            retrieval_cache_ttl_seconds=int(_env("RETRIEVAL_CACHE_TTL_SECONDS", "300")),
+            response_cache_ttl_seconds=int(_env("RESPONSE_CACHE_TTL_SECONDS", "300")),
+            api_host=_env("API_HOST", "0.0.0.0"),
+            api_port=int(_env("API_PORT", "8000")),
+            log_level=_env("LOG_LEVEL", "INFO").upper(),
+            json_logs=_env("JSON_LOGS", "false").lower()
             in {"1", "true", "yes", "on"},
         )
 

@@ -68,6 +68,35 @@ The batch runner reads `datasets/questions/questions.xlsx` and writes `outputs/r
 python -m rag_system.qa_bulkload
 ```
 
+## Run the HTTP API
+
+After building the index, start the production API:
+
+```powershell
+python scripts/run_api.py
+```
+
+Available endpoints:
+
+- `GET /health`
+- `GET /ready`
+- `GET /papers`
+- `POST /query`
+
+Example query:
+
+```powershell
+Invoke-RestMethod -Method Post http://127.0.0.1:8000/query `
+  -ContentType "application/json" `
+  -Body '{"question":"Which papers mention COPD?","top_k":5}'
+```
+
+Docker Compose is also available:
+
+```powershell
+docker compose up --build
+```
+
 ## Configuration
 
 Runtime defaults live in `rag_system/utils/config.py`. Environment variables with the `RAG_` prefix can override key settings, including:
@@ -77,5 +106,26 @@ Runtime defaults live in `rag_system/utils/config.py`. Environment variables wit
 - `RAG_MODEL_NAME`
 - `RAG_TOP_K`
 - `RAG_CHUNK_SIZE`
+- `RAG_RETRIEVAL_ALPHA`
+- `RAG_ENABLE_CACHE`
+- `RAG_API_HOST`
+- `RAG_API_PORT`
+- `RAG_LOG_LEVEL`
+- `RAG_JSON_LOGS`
 
 Legacy paths such as `pdfs`, `output`, and root-level `questions.xlsx` are still detected as fallbacks when the organized paths do not exist.
+
+## Production Hardening
+
+The repository now includes:
+
+- application service layer: `rag_system.service.RAGService`
+- structured logging: `rag_system.logging_config`
+- bounded TTL caches: `rag_system.cache`
+- telemetry counters and latency summaries: `rag_system.telemetry`
+- FastAPI service: `rag_system.api`
+- evaluation helpers: `rag_system.evaluation`
+- benchmark helpers: `rag_system.benchmark`
+- Docker, Docker Compose, and GitHub Actions CI
+
+See [ARCHITECTURE.md](ARCHITECTURE.md), [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md), [CONFIGURATION.md](CONFIGURATION.md), [DEPLOYMENT.md](DEPLOYMENT.md), [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md), and [PERFORMANCE.md](PERFORMANCE.md).

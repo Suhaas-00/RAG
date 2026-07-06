@@ -30,4 +30,4 @@ Missing API key is handled by fallback. Groq API exceptions are not caught insid
 
 ## Batch
 
-`run_bulk_inference` catches exceptions per question, logs them, and writes a placeholder error response row.
+`run_bulk_inference` catches exceptions per question, logs them, and writes an explicit error response row.

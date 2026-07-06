@@ -15,8 +15,8 @@ import numpy as np
 from rag_system.ingestion.embedding import PubMedEmbedder
 from rag_system.query_parser import QueryIntent
 from rag_system.retrieval.document_scope import filter_record_indices, has_document_scope
+from rag_system.retrieval.retrieval_config import document_scope_enabled
 from rag_system.reranker import CrossEncoderReranker
-from rag_system.utils.config import Settings
 from rag_system.utils.preprocessing import normalize_for_embedding
 
 logger = logging.getLogger(__name__)
@@ -37,14 +37,14 @@ class HybridRetriever:
         embedder: PubMedEmbedder,
         *,
         alpha: float = 0.55,
-        enable_document_filtering: bool = True,
+        enable_document_filtering: bool | None = None,
         allow_global_search: bool = False,
     ) -> None:
         self.index = index
         self.payload = payload
         self.embedder = embedder
         self.alpha = alpha
-        self.enable_document_filtering = enable_document_filtering
+        self.enable_document_filtering = document_scope_enabled(enable_document_filtering)
         self.allow_global_search = allow_global_search
         self.records: list[dict] = payload["records"]
         self.tfidf = payload.get("tfidf_vectorizer")
@@ -61,7 +61,6 @@ class HybridRetriever:
         enable_document_filtering: bool | None = None,
         allow_global_search: bool | None = None,
     ) -> "HybridRetriever":
-        settings = Settings()
         index_dir = Path(index_dir)
         index_path = index_dir / "vectors.index"
         metadata_path = index_dir / "metadata.pkl"
@@ -79,14 +78,8 @@ class HybridRetriever:
             payload,
             embedder,
             alpha=alpha,
-            enable_document_filtering=(
-                settings.enable_document_filtering
-                if enable_document_filtering is None else enable_document_filtering
-            ),
-            allow_global_search=(
-                settings.allow_global_search or settings.default_filter_mode == "global"
-                if allow_global_search is None else allow_global_search
-            ),
+            enable_document_filtering=enable_document_filtering,
+            allow_global_search=False if allow_global_search is None else allow_global_search,
         )
 
     def retrieve(
@@ -116,15 +109,24 @@ class HybridRetriever:
             filters["document_ids"] = legacy_filters["document_ids"]
         if legacy_filters.get("section_filter"):
             filters["section"] = legacy_filters["section_filter"]
+        if legacy_filters.get("disease_filter"):
+            filters["disease"] = legacy_filters["disease_filter"]
+        if legacy_filters.get("gene_filter"):
+            filters["gene"] = legacy_filters["gene_filter"]
+        if legacy_filters.get("year_filter"):
+            filters["year"] = legacy_filters["year_filter"]
         if legacy_filters.get("chunk_type_filter"):
             filters["chunk_type"] = legacy_filters["chunk_type_filter"]
 
-        scoped_global = self.allow_global_search if allow_global_search is None else allow_global_search
-        candidate_indices = self._metadata_filter(filters, allow_global_search=scoped_global)
+        scoped = has_document_scope(filters)
+        effective_allow_global = (
+            True if not scoped else self.allow_global_search
+        ) if allow_global_search is None else allow_global_search
+        candidate_indices = self._metadata_filter(filters, allow_global_search=allow_global_search)
         debug = {
             "filters": filters,
-            "document_scoped": has_document_scope(filters),
-            "allow_global_search": scoped_global,
+            "document_scoped": self.enable_document_filtering and scoped,
+            "allow_global_search": effective_allow_global,
             "candidate_count": len(candidate_indices),
         }
         if not candidate_indices:
@@ -169,11 +171,15 @@ class HybridRetriever:
         return RetrievalResult(format_context(reranked), reranked, debug)
 
     def _metadata_filter(self, filters: dict[str, object], *, allow_global_search: bool | None = None) -> list[int]:
+        scoped = has_document_scope(filters)
+        effective_allow_global = (
+            True if not scoped else self.allow_global_search
+        ) if allow_global_search is None else allow_global_search
         return filter_record_indices(
             self.records,
             filters,
             enable_document_filtering=self.enable_document_filtering,
-            allow_global_search=self.allow_global_search if allow_global_search is None else allow_global_search,
+            allow_global_search=effective_allow_global,
             require_document_scope=True,
         )
 

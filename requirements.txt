@@ -30,6 +30,13 @@ faiss-cpu>=1.7.4
 # Answer generation / environment
 groq>=0.9.0
 python-dotenv>=1.0.0
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+
+# Batch processing / reports
+pandas>=2.2.0
+openpyxl>=3.1.0
 
 # Optional but recommended (better performance & parsing)
 

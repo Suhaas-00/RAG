@@ -1,0 +1,23 @@
+services:
+  rag-api:
+    build: .
+    image: medical-rag-platform:local
+    ports:
+      - "${RAG_API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      RAG_API_HOST: "0.0.0.0"
+      RAG_API_PORT: "8000"
+      RAG_OUTPUT_DIR: "/app/outputs/index"
+      RAG_PDF_DIR: "/app/datasets/raw/pdfs"
+    volumes:
+      - ./datasets:/app/datasets:ro
+      - ./outputs:/app/outputs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/ready', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+

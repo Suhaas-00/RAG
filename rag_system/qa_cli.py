@@ -6,9 +6,11 @@ import argparse
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 from rag_system.hybrid_retriever import HybridRetriever, RetrievalResult
 from rag_system.llm import FALLBACK, answer_with_groq, load_groq_api_key
+from rag_system.logging_config import configure_logging
 from rag_system.query_parser import QueryIntent, build_retrieval_query, parse_query
 from rag_system.utils import debug_dump
 from rag_system.utils.config import Settings
@@ -74,7 +76,7 @@ def answer_question(
     top_k: int = 5,
     alpha: float = 0.55,
     verbose: bool = False,
-    allow_global_search: bool = False,
+    allow_global_search: Optional[bool] = None,
 ) -> str:
     """Answer a question while preserving the old public function signature."""
 
@@ -86,7 +88,7 @@ def answer_question(
                 retriever.payload,
                 retriever.embedder,
                 alpha=alpha,
-                allow_global_search=allow_global_search,
+                allow_global_search=bool(allow_global_search),
             )
         else:
             raise TypeError("retriever must be HybridRetriever-compatible")
@@ -129,36 +131,38 @@ def answer_question(
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    settings = Settings.from_env()
     parser = argparse.ArgumentParser(
         prog="qa_cli",
         description="Query the medical RAG index.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("question", nargs="?", help="Question to answer. Omit for interactive mode.")
-    parser.add_argument("--index-dir", default=str(Settings().index_dir), metavar="PATH")
+    parser.add_argument("--index-dir", default=str(settings.index_dir), metavar="PATH")
     parser.add_argument("--model", default="llama-3.1-8b-instant", metavar="NAME")
-    parser.add_argument("--top-k", type=int, default=5, metavar="INT")
-    parser.add_argument("--alpha", type=float, default=0.55, metavar="FLOAT")
+    parser.add_argument("--top-k", type=int, default=settings.top_k, metavar="INT")
+    parser.add_argument("--alpha", type=float, default=settings.retrieval_alpha, metavar="FLOAT")
     parser.add_argument(
         "--global-search",
         action="store_true",
         help="Explicitly allow retrieval across all indexed documents when no document identifier is present.",
     )
     parser.add_argument("--verbose", action="store_true")
-    parser.add_argument("--log-level", default="WARNING", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument("--log-level", default=settings.log_level, choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+    parser.add_argument("--json-logs", action="store_true", default=settings.json_logs)
     return parser
 
 
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
-    logging.basicConfig(level=getattr(logging, args.log_level), format="%(levelname)s %(name)s: %(message)s")
+    configure_logging(args.log_level, json_logs=args.json_logs)
 
     try:
         retriever = HybridRetriever.load(
             args.index_dir,
             alpha=args.alpha,
-            allow_global_search=args.global_search,
+            allow_global_search=True if args.global_search else None,
         )
     except Exception as exc:  # noqa: BLE001
         sys.exit(f"[ERROR] Could not load index from '{args.index_dir}': {exc}")
@@ -171,7 +175,7 @@ def main() -> None:
             top_k=args.top_k,
             alpha=args.alpha,
             verbose=args.verbose,
-            allow_global_search=args.global_search,
+            allow_global_search=True if args.global_search else None,
         ))
         return
 
@@ -192,7 +196,7 @@ def main() -> None:
                 top_k=args.top_k,
                 alpha=args.alpha,
                 verbose=args.verbose,
-                allow_global_search=args.global_search,
+                allow_global_search=True if args.global_search else None,
             ))
 
 
